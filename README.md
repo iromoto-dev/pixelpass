@@ -19,8 +19,8 @@
 
 </div>
 
-**Everything runs locally:** your picture is never uploaded, the page makes no network requests and uses no cookies or
-trackers.
+**Everything runs locally**\
+Your picture is never uploaded, the page makes no network requests and uses no cookies or trackers.
 
 **Use it:** [pixelpass.iromoto.dev](https://pixelpass.iromoto.dev) · or download `index.html` and open it, it works offline.
 
