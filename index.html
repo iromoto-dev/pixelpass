@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Turn a painting or a photo into pixel art in your browser: a real low-resolution grid, a limited palette and ordered dither. Everything runs locally.">
-<title>Pixel Pass</title>
+<title>Pixel Pass · Turn any picture into pixel art</title>
 <!-- Pixel Pass · Copyright (C) 2026 iromoto · SPDX-License-Identifier: GPL-3.0-or-later (the sample picture excluded) -->
 <style>
 :root {
@@ -236,6 +236,15 @@ button.btn.icon { padding: 9px; }
 .notes ol { margin: 0; padding-left: 1.25em; color: var(--fg-2); display: grid; gap: 6px; }
 .notes p { margin: 0 0 8px; color: var(--fg-2); max-width: 62ch; }
 .notes b { color: var(--fg); font-weight: 650; }
+/* the notes fold away behind one small button, so the tool keeps the room */
+.more-info { margin-top: 32px; text-align: center; }
+.more-info > summary { display: inline-flex; align-items: center; gap: 7px; list-style: none; cursor: pointer; text-shadow: none;
+  font: 600 13.5px var(--font-sans); color: var(--fg-2); background: var(--card-soft); border: 1px solid var(--line);
+  border-radius: 999px; padding: 7px 15px; box-shadow: var(--shadow-m); }
+.more-info > summary::-webkit-details-marker { display: none; }
+.more-info > summary:hover, .more-info[open] > summary { color: var(--fg); border-color: var(--accent); }
+.more-info > summary svg { width: 16px; height: 16px; transform: translateY(var(--icon-dy, 0.09em)); }
+.more-info .notes { margin-top: 14px; text-align: left; }
 /* shown only while a day or night picked by hand holds: one click hands the sky back to the clock */
 .foot { margin-top: 28px; display: grid; justify-items: center; gap: 10px; }
 .foot .site { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; background: var(--card-soft); border-radius: 999px; padding: 4px 14px; font-size: 12.5px; }
@@ -283,7 +292,7 @@ button.btn.icon { padding: 9px; }
 <div class="wrap">
   <header class="top">
     <h1>Pixel<span>Pass</span></h1>
-    <p class="lead">Turn a painting or a photo into pixel art.<br>Everything runs locally.</p>
+    <p class="lead">Turn a painting or a photo into pixel art.<br>Runs locally on your device.</p>
     <div class="hbtns">
       <a class="kofi" href="https://ko-fi.com/poschrafael" target="_blank" rel="noopener" aria-label="Support Pixel Pass on Ko-fi" title="Support Pixel Pass on Ko-fi"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#e2f5ff" d="M4 1h1v1h-1zM7 1h1v1h-1zM3 2h1v1h-1zM6 2h1v1h-1z"/><path fill="#ffffff" d="M1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM11 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM8 6h1v1h-1zM11 6h1v1h-1zM1 7h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM11 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM2 9h1v1h-1zM3 9h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1zM7 9h1v1h-1z"/><path class="glow" fill="#ffc2c1" d="M2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM8 5h1v1h-1zM2 6h1v1h-1zM8 6h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1z"/><path class="heart" fill="#ff5e5b" d="M3 5h1v1h-1zM4 5h1v1h-1zM6 5h1v1h-1zM7 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM5 8h1v1h-1z"/><path fill="#cfe6f2" d="M9 5h1v1h-1zM9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM3 10h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1z"/></svg></a>
       <button type="button" class="skybtn" id="skyBtn" aria-label="Toggle dark mode" title="Toggle dark mode"><svg class="sun" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#ffcf3f" d="M4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM7 3h1v1h-1zM3 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM3 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM7 5h1v1h-1zM8 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM3 7h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z"/><path fill="#fff1a0" d="M4 4h1v1h-1zM5 4h1v1h-1zM4 5h1v1h-1z"/><path fill="#f0a020" d="M8 6h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1z"/><path fill="#ffd85a" d="M5 0h1v1h-1zM6 0h1v1h-1zM1 1h1v1h-1zM10 1h1v1h-1zM2 2h1v1h-1zM9 2h1v1h-1zM0 5h1v1h-1zM11 5h1v1h-1zM0 6h1v1h-1zM11 6h1v1h-1zM2 9h1v1h-1zM9 9h1v1h-1zM1 10h1v1h-1zM10 10h1v1h-1zM5 11h1v1h-1zM6 11h1v1h-1z"/></svg><svg class="moon" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#f0a020" d="M4 1h1v1h-1zM5 1h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM1 4h1v1h-1zM1 5h1v1h-1zM1 6h1v1h-1zM1 7h1v1h-1zM2 8h1v1h-1zM9 8h1v1h-1zM3 9h1v1h-1zM8 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1z"/><path fill="#ffcf3f" d="M4 2h1v1h-1zM4 3h1v1h-1zM2 4h1v1h-1zM4 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1zM7 9h1v1h-1z"/><path fill="#fff1a0" d="M3 3h1v1h-1zM3 4h1v1h-1z"/><path fill="#ffffff" d="M10 1h1v1h-1z"/><path fill="#cfd8ff" d="M11 7h1v1h-1z"/></svg></button>
@@ -304,7 +313,7 @@ button.btn.icon { padding: 9px; }
         <div class="swatches" id="swatches" aria-label="Palette"></div>
         <div class="actions">
           <button class="btn" id="setBtn" type="button" title="Full screen with the settings under or beside the picture (Esc leaves)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
-          <button class="btn" id="fsBtn" type="button" title="Full screen: only the picture, Settings shows the sliders beside it or under it (Esc leaves)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5V3H6M10 3h3.5v3.5M13.5 10.5V14H10M6 14H2.5v-3.5"/></svg>Full screen</button>
+          <button class="btn" id="fsBtn" type="button" title="Full screen (F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5V3H6M10 3h3.5v3.5M13.5 10.5V14H10M6 14H2.5v-3.5"/></svg>Full screen</button>
           <label class="btn" for="file"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3M4.5 6.5 8 3l3.5 3.5M3 13h10"/></svg>Open a picture</label>
           <input type="file" id="file" class="file" accept="image/*">
           <button class="btn" id="dlBig" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10"/></svg><span id="dlBigLabel">PNG ×4</span></button>
@@ -336,7 +345,7 @@ button.btn.icon { padding: 9px; }
       </div>
       <div class="fsbar">
         <button type="button" class="btn small" id="fsPanel" aria-pressed="false" title="Show or hide the settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
-        <button type="button" class="btn small" id="fsExit" title="Leave the full view (Esc)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3H3M13 6h-3V3M10 13v-3h3M3 10h3v3"/></svg>Exit</button>
+        <button type="button" class="btn small" id="fsExit" title="Exit full screen (Esc or F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3H3M13 6h-3V3M10 13v-3h3M3 10h3v3"/></svg>Exit</button>
       </div>
     </div>
 
@@ -386,11 +395,13 @@ button.btn.icon { padding: 9px; }
       <label class="check" title="Small colourful areas get their own colours like big ones (off: the picture's own colour mix, light and dark weigh more)"><input type="checkbox" id="balance"> Balance the colours</label>
         </div>
       </details>
-      <p class="hint keys">Drop or paste (Ctrl+V) a picture anywhere.<br>Use Ctrl+C to copy the result.</p>
+      <p class="hint keys">Drop or paste (Ctrl+V) a picture anywhere.<br>Ctrl+C copies the result. F to switch to full screen.</p>
       <button type="button" class="reset" id="reset">Back to the defaults</button>
     </form>
   </div>
 
+  <details class="more-info" id="moreInfo">
+  <summary title="What happens to your picture, and whether it is real pixel art"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.3v4M8 4.7v.1"/></svg>More information</summary>
   <section class="notes">
     <div>
       <h2>What happens to your picture</h2>
@@ -408,6 +419,7 @@ button.btn.icon { padding: 9px; }
       <p><b>In craft, no:</b> an algorithm placed the pixels, so busy areas keep some speckle an artist would clean up. Use it as a strong starting point.</p>
     </div>
   </section>
+  </details>
   <footer class="foot"><button type="button" class="autosky" id="autoSky" title="Follow your clock again: day from 7:00 to 19:00">Automatic day and night</button></footer>
 </div>
 
@@ -1008,6 +1020,14 @@ document.getElementById("fsExit").addEventListener("click", leaveFull);
 fsPanel.addEventListener("click", () => fsPanel.setAttribute("aria-pressed", String(!docEl.classList.toggle("nopanel"))));
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && docEl.classList.contains("full")) setFull(false); });
 addEventListener("keydown", e => { if (e.key === "Escape" && docEl.classList.contains("full") && !document.fullscreenElement) leaveFull(); });
+// F switches the full view on and off: not while typing, and not on a list (a letter there picks an entry)
+addEventListener("keydown", e => {
+  if (e.key.toLowerCase() !== "f" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const a = document.activeElement;
+  if (a && a.matches("input[type=text], input:not([type]), textarea, select, [contenteditable]")) return;
+  e.preventDefault();
+  if (docEl.classList.contains("full")) leaveFull(); else enterFull(false);
+});
 
 // the sample: a summer riverside beach
 // the last settings of this browser (restored here: the helpers it needs are defined above by now)
