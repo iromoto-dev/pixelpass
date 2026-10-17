@@ -1,0 +1,1281 @@
+<title>Pixel Pass</title>
+<!-- Pixel Pass · Copyright (C) 2026 iromoto · SPDX-License-Identifier: GPL-3.0-or-later (the sample picture excluded) -->
+<style>
+:root {
+  color-scheme: light;
+  --hue: 355;
+  --font-sans: 'Manrope', 'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-pixel: 'Pixelify Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  --bg: #7fb9ea;
+  --bg-elev: oklch(99.6% 0.003 250);
+  --bg-soft: oklch(97% 0.008 250);
+  --fg: oklch(25% 0.035 262);
+  --fg-2: oklch(42% 0.03 262);
+  --fg-3: oklch(56% 0.025 262);
+  --line: oklch(90% 0.015 250);
+  --line-strong: oklch(82% 0.02 250);
+  --accent: oklch(60% 0.17 var(--hue));
+  --accent-strong: oklch(52% 0.18 var(--hue));
+  --accent-soft: oklch(95% 0.03 var(--hue));
+  --on-accent: oklch(99% 0.01 var(--hue));
+  --warn: oklch(55% 0.17 25);
+  --stage: oklch(16% 0.03 262);
+  --checker: oklch(21% 0.03 262);
+  --shadow-m: 0 2px 4px oklch(30% 0.05 262 / 0.06), 0 18px 44px -18px oklch(30% 0.1 262 / 0.35);
+  --halo: oklch(40% 0.15 262 / 0.5);
+  --sky-fg: #fff;
+  --sky-fg-2: oklch(98% 0.01 250);
+  --sky-accent: #ffcfe0;
+  --card-soft: oklch(100% 0 0 / 0.9);
+  --radius-s: 10px;
+  --radius: 18px;
+}
+:root[data-sky="night"] {
+  color-scheme: dark;
+  --hue: 280;
+  --bg: #050511;
+  --bg-elev: oklch(20.5% 0.018 290);
+  --bg-soft: oklch(23% 0.02 290);
+  --fg: oklch(95% 0.01 80);
+  --fg-2: oklch(78% 0.014 80);
+  --fg-3: oklch(63% 0.014 80);
+  --line: oklch(28% 0.02 290);
+  --line-strong: oklch(36% 0.022 290);
+  --accent: oklch(76% 0.13 var(--hue));
+  --accent-strong: oklch(82% 0.12 var(--hue));
+  --accent-soft: oklch(27% 0.05 var(--hue));
+  --on-accent: oklch(18% 0.04 var(--hue));
+  --warn: oklch(72% 0.15 25);
+  --stage: oklch(11% 0.02 var(--hue));
+  --checker: oklch(15.5% 0.02 var(--hue));
+  --shadow-m: 0 2px 4px oklch(0% 0 0 / 0.3), 0 18px 44px -18px oklch(0% 0 0 / 0.55);
+  --halo: #050511;
+  --sky-fg: oklch(95% 0.01 80);
+  --sky-fg-2: oklch(78% 0.014 80);
+  --sky-accent: oklch(76% 0.13 280);
+  --card-soft: oklch(20.5% 0.018 290 / 0.94);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-sans); -webkit-font-smoothing: antialiased; }
+/* the night sky: a fixed canvas under everything, drawn by the second script */
+.sky { position: fixed; left: 0; top: 0; width: 100%; height: 100vh; height: 100lvh; overflow: hidden; z-index: 0; pointer-events: none; background: var(--bg); }
+.sky canvas { display: block; image-rendering: pixelated; }
+/* the notes sit on a card: a long read needs a calm ground (by night a star beside a comma reads as punctuation) */
+.notes { text-shadow: none; background: var(--card-soft); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px clamp(16px, 3vw, 28px); box-shadow: var(--shadow-m); }
+/* the day/night switch: a pixel-art button showing a little of the other sky (by day a night square with the moon) */
+.hbtns { display: flex; gap: 10px; margin-left: auto; }
+/* the day/night switch: just the pixel sun or moon (no frame), three screen pixels per pixel, like the Ko-fi mug */
+.skybtn { flex: none; display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; cursor: pointer; text-shadow: none;
+  border: 0; background: none; }
+.skybtn svg { width: 36px; height: 36px; image-rendering: pixelated; transition: transform 0.15s, filter 0.15s; }
+.skybtn:hover svg { transform: translateY(-1px); filter: brightness(1.12); }
+.skybtn:active svg { transform: translateY(1px); }
+/* Ko-fi: just the pixel mug (a white cup with a red heart), three screen pixels per pixel, no frame */
+.kofi { flex: none; display: inline-grid; place-items: center; width: 36px; height: 36px; }
+.kofi svg { width: 36px; height: 36px; image-rendering: pixelated; transition: transform 0.15s; }
+.kofi:hover svg { transform: translateY(-1px); }
+.kofi .glow { opacity: 0; transition: opacity 0.2s; }
+.kofi .heart { transition: fill 0.2s; }
+.kofi:hover .glow, .kofi:focus-visible .glow { opacity: 1; }      /* the heart lights up: brighter, a ring of pink pixels */
+.kofi:hover .heart, .kofi:focus-visible .heart { fill: #ff2f5f; }
+.skybtn .sun, :root[data-sky="night"] .skybtn .moon { display: none; }
+:root[data-sky="night"] .skybtn .sun { display: block; }
+/* the header sits on the sky: a halo, so a star or a cloud edge beside a letter does not read as punctuation */
+.top { --h: var(--halo); text-shadow: 0 0 2px var(--h), 0 0 4px var(--h), 0 0 4px var(--h), 0 0 6px var(--h), 0 0 6px var(--h), 0 0 10px var(--h), 0 0 10px var(--h); }
+.wrap { position: relative; z-index: 1; max-width: 74rem; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: clamp(20px, 4vw, 44px) 56px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 28px; margin-bottom: 22px; }
+h1 { font: 600 clamp(2.2rem, 5vw, 3.1rem)/1 var(--font-pixel); letter-spacing: 0.01em; margin: 0; color: var(--sky-fg); }
+h1 span { color: var(--sky-accent); }
+.lead { margin: 0; max-width: 46ch; color: var(--sky-fg-2); text-wrap: pretty; }
+.tool { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .tool { grid-template-columns: minmax(0, 1fr); } }
+
+/* stage: the picture left of the line, its pixel art right of it */
+.stage-card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-m); padding: 10px; min-width: 0; }
+.stage { position: relative; overflow: hidden; border-radius: var(--radius-s);
+  background: repeating-conic-gradient(var(--checker) 0 25%, var(--stage) 0 50%) 0 0 / 16px 16px;  /* shows where a picture is transparent */ cursor: ew-resize; touch-action: pan-y; /* a finger moving up or down still scrolls the page */ --cut: 50%; max-width: min(100%, calc(62vh * var(--ratio, 2))); }
+.stage img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+/* the pixel art is drawn by the page into a canvas with one canvas pixel per screen pixel, so the browser never
+   resamples it (at a size that is not a whole multiple, every repaint could pick other pixels: flashing). It lies
+   underneath and never changes; the smooth picture on top is the one clipped. */
+.stage .px { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.stage #srcImg { position: relative; z-index: 1; clip-path: inset(0 calc(100% - var(--cut)) 0 0); }
+.stage .px { z-index: 0; }
+.stage > .bar, .stage > .tag, .stage > .hint-tag, .stage.busy::after { z-index: 2; }
+@property --cut { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
+.stage { transition: --cut 0.15s ease-out; }
+.stage.empty #srcImg { clip-path: none; }      /* before the first pixel art: the painting, whole */
+.stage.empty .bar { display: none; }
+.stage.dragging { transition: none; }
+.stage .bar { position: absolute; top: 0; bottom: 0; left: var(--cut); width: 2px; margin-left: -1px; background: oklch(100% 0 0 / 0.75); box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.35); pointer-events: none; }
+.stage .tag { position: absolute; top: 8px; font: 600 11px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: oklch(96% 0 0); background: oklch(0% 0 0 / 0.55); padding: 5px 8px; border-radius: 6px; border: 0; cursor: pointer; }
+.stage .tag.l { left: 8px; } .stage .tag.r { right: 8px; }
+.stage .tag:hover { background: oklch(0% 0 0 / 0.75); }
+.stage .tag.on { background: var(--accent); color: var(--on-accent); }
+.stage.busy::after { content: "Pixelating…"; position: absolute; right: 8px; bottom: 8px; font: 600 12px var(--font-sans); color: oklch(96% 0 0); background: oklch(0% 0 0 / 0.55); padding: 5px 9px; border-radius: 6px; }
+.stage.drag { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.under { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 4px 4px; }
+.stage { margin-inline: auto; }
+@media (min-width: 901px) { .stage-card { position: sticky; top: 16px; } }
+.presets { display: grid; gap: 8px; margin-top: 12px; padding: 12px 4px 2px; border-top: 1px solid var(--line); }
+.presets .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.presets .prow > .lab { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-3); }
+.presets select { width: auto; flex: 1 1 180px; max-width: 280px; }
+.presets .inline { flex: 1 1 260px; }
+.stats { font: 13px var(--font-mono); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.swatches { display: flex; flex-wrap: wrap; gap: 3px; flex: 1 1 260px; min-width: 0; }
+.swatches i { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.15); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+/* one column (the settings far below the picture): Settings opens the full view with them in sight */
+#setBtn { display: none; }
+@media (max-width: 900px) { #setBtn { display: inline-flex; } }
+/* a phone held upright: the buttons two by two, the download across */
+@media (max-width: 560px) {
+  .actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin-left: 0; }
+  .actions .btn { justify-content: center; }
+  .actions #dl { grid-column: 1 / -1; }
+}
+
+/* full view: only the picture, as large as the screen; Settings opens the sliders at the side (the picture makes room),
+   or under the picture on an upright screen */
+.fsbar { display: none; }
+:root.full, :root.full body { overflow: hidden; }
+:root.full .tool { position: fixed; inset: 0; z-index: 20; grid-template-columns: minmax(0, 1fr) auto; gap: 0; align-items: stretch; background: var(--stage); }
+:root.full .stage-card { position: relative; top: auto; height: 100vh; height: 100dvh; padding: 56px 16px 16px; border: 0; border-radius: 0; box-shadow: none; background: none; display: grid; place-items: center; min-height: 0; }
+:root.full .stage { width: 100%; max-width: min(100%, calc((100vh - 72px) * var(--ratio, 2))); max-width: min(100%, calc((100dvh - 72px) * var(--ratio, 2))); }
+:root.full .under, :root.full .presets { display: none; }
+:root.full .panel { width: 340px; height: 100vh; height: 100dvh; overflow-y: auto; align-content: start; padding-top: 60px; border-radius: 0; border-width: 0 0 0 1px; }
+:root.full.nopanel .panel { display: none; }
+:root.full .fsbar { display: flex; gap: 8px; position: fixed; top: 12px; right: 12px; z-index: 30; }
+.fsbar .btn { background: oklch(14% 0.02 262 / 0.7); color: oklch(97% 0 0); border-color: oklch(100% 0 0 / 0.28); }
+.fsbar .btn[aria-pressed="true"] { border-color: var(--accent); }
+@media (max-width: 700px) and (orientation: landscape) {
+  :root.full .tool { grid-template-columns: minmax(0, 1fr); }
+  :root.full .panel { position: fixed; top: 0; right: 0; width: min(340px, 88vw); z-index: 25; box-shadow: var(--shadow-m); }
+}
+/* upright (a phone, a tablet held upright): a panel at the side would cover the picture or shrink it to a strip, so the
+   picture goes on top, at most about half the height, and the settings scroll under it */
+@media (orientation: portrait) {
+  :root.full .tool { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  :root.full:not(.nopanel) .stage-card { height: auto; padding: 56px 12px 12px; }
+  :root.full:not(.nopanel) .stage { max-width: min(100%, calc(48vh * var(--ratio, 2))); max-width: min(100%, calc(48dvh * var(--ratio, 2))); }
+  :root.full .panel { width: auto; height: auto; min-height: 0; padding-top: 16px; border-width: 1px 0 0; }
+}
+
+/* controls */
+.panel { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 16px; }
+.group { display: grid; gap: 8px; }
+.group > .lab { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-3); }
+.seg { display: flex; border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--bg-elev); color: var(--fg-2); font: 600 13px var(--font-sans); padding: 8px 6px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); }
+select { width: 100%; font: 500 14px var(--font-sans); color: var(--fg); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 10px; }
+.slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.slider label { font-size: 14px; color: var(--fg); }
+.slider output { font: 13px var(--font-mono); color: var(--fg-2); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
+.slider input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.slider.off { opacity: 0.45; }
+.hint { font-size: 12.5px; color: var(--fg-3); margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+button.btn, label.btn { display: inline-flex; align-items: center; gap: 7px; font: 600 14px var(--font-sans); border-radius: 10px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line-strong); background: var(--bg-elev); color: var(--fg); }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.btn:hover, label.btn:hover { border-color: var(--accent); }
+button.btn.primary:hover { background: var(--accent-strong); }
+button.btn svg, label.btn svg { width: 16px; height: 16px; transform: translateY(var(--icon-dy, 0.09em)); }
+.file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.inline { display: flex; gap: 8px; }
+.sizerow { display: flex; align-items: center; gap: 8px; }
+.sizerow .seg { flex: none; }
+.sizerow .seg button { flex: none; width: 29px; padding: 7px 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sizerow input[type=range] { flex: 1 1 0; width: 0; min-width: 40px; margin: 0; accent-color: var(--accent); }
+.panel > *, .group { min-width: 0; }
+.sizerow output { font: 12px var(--font-mono); color: var(--fg-2); min-width: 3.6em; text-align: right; font-variant-numeric: tabular-nums; }
+details.more { border-top: 1px solid var(--line); padding-top: 12px; }
+details.more > summary { cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-3); }
+details.more[open] > summary { margin-bottom: 14px; }
+details.more .inner { display: grid; gap: 16px; }
+.stage .hint-tag { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); font: 600 11px/1 var(--font-sans); color: oklch(96% 0 0); background: oklch(0% 0 0 / 0.55); padding: 5px 9px; border-radius: 6px; pointer-events: none; white-space: nowrap; }
+.stage .note-tag { top: 50%; bottom: auto; transform: translate(-50%, -50%); }
+.inline input { flex: 1; min-width: 0; }
+input[type=text], textarea { font: 500 14px var(--font-sans); color: var(--fg); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 10px; }
+textarea { width: 100%; resize: vertical; font: 12px/1.4 var(--font-mono); }
+button.btn.small { padding: 7px 12px; font-size: 13px; }
+button.btn.icon { padding: 9px; }
+.share { display: grid; gap: 8px; }
+.share summary { cursor: pointer; font-size: 13px; color: var(--fg-2); }
+.share[open] summary { margin-bottom: 6px; }
+.linkbtn { justify-self: start; background: none; border: 0; padding: 0; color: var(--fg-2); font: 600 13px var(--font-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.linkbtn.warn { color: var(--warn); }
+.msg { min-height: 1em; }
+.reset { justify-self: start; background: none; border: 0; padding: 0; color: var(--accent-strong); font: 600 13px var(--font-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+/* fingers: bigger targets for the small controls (the labels on the picture keep their size and get a wider reach) */
+@media (pointer: coarse) {
+  .stage .tag::before { content: ""; position: absolute; inset: -8px; }
+  .sizerow .seg button { width: 33px; padding: 10px 0; }
+  .check { padding-block: 5px; }
+  .check input { width: 20px; height: 20px; }
+  .reset, .linkbtn, details summary { padding-block: 7px; }
+}
+/* no mouse, no keyboard shortcuts to speak of */
+@media (hover: none) { .keys { display: none; } }
+
+/* below the tool */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
+.notes h2 { font: 700 16px/1.3 var(--font-sans); margin: 0 0 10px; text-wrap: balance; }
+.notes ol { margin: 0; padding-left: 1.25em; color: var(--fg-2); display: grid; gap: 6px; }
+.notes p { margin: 0 0 8px; color: var(--fg-2); max-width: 62ch; }
+.notes b { color: var(--fg); font-weight: 650; }
+/* shown only while a day or night picked by hand holds: one click hands the sky back to the clock */
+.foot { margin-top: 28px; display: grid; justify-items: center; gap: 10px; }
+.foot .site { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; background: var(--card-soft); border-radius: 999px; padding: 4px 14px; font-size: 12.5px; }
+.foot .site a { color: var(--fg-3); text-decoration: none; }
+.foot .site a:hover { color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; }
+.autosky { display: none; background: var(--card-soft); border: 0; border-radius: 999px; padding: 4px 12px; font: 500 12.5px var(--font-sans); color: var(--fg-3); cursor: pointer; }
+.autosky:hover { color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; }
+:root[data-sky-held] .autosky { display: inline-block; }
+</style>
+<script>
+"use strict";
+// day or night by the visitor's clock (day from 7:00 to 19:00), until the switch picks one by hand; that pick is kept
+// (localStorage) until "Automatic day and night" at the bottom of the page hands the sky back to the clock
+(() => {
+  const root = document.documentElement, KEY = "pixelpass.sky", DAY_FROM = 7, DAY_TO = 19;
+  const byClock = () => { const h = new Date().getHours(); return h >= DAY_FROM && h < DAY_TO ? "day" : "night"; };
+  let held = null;
+  try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (v && (v.sky === "day" || v.sky === "night")) held = v.sky; } catch (e) { /* no storage */ }
+  const apply = () => {
+    const m = held || byClock();
+    if (root.dataset.sky !== m) root.dataset.sky = m;
+    if (held) root.dataset.skyHeld = ""; else delete root.dataset.skyHeld;
+    const b = document.getElementById("skyBtn"), label = m === "night" ? "Toggle light mode" : "Toggle dark mode";
+    if (b && b.title !== label) { b.title = label; b.setAttribute("aria-label", label); }
+  };
+  const keep = () => { try { if (held) localStorage.setItem(KEY, JSON.stringify({ sky: held })); else localStorage.removeItem(KEY); } catch (e) { /* this visit only */ } };
+  apply();
+  document.addEventListener("DOMContentLoaded", apply);   // the switch's label, once the button exists
+  setInterval(apply, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) apply(); });
+  document.addEventListener("click", e => {
+    const t = e.target instanceof Element ? e.target : null;
+    if (t && t.closest("#skyBtn")) held = root.dataset.sky === "night" ? "day" : "night";
+    else if (t && t.closest("#autoSky")) held = null;
+    else return;
+    keep(); apply();
+  });
+})();
+</script>
+
+<div class="sky" id="skyHost" aria-hidden="true"><canvas id="sky"></canvas></div>
+<div class="wrap">
+  <header class="top">
+    <h1>Pixel<span>Pass</span></h1>
+    <p class="lead">Turn a painting or a photo into pixel art.<br>Everything runs locally.</p>
+    <div class="hbtns">
+      <a class="kofi" href="https://ko-fi.com/poschrafael" target="_blank" rel="noopener" aria-label="Support Pixel Pass on Ko-fi" title="Support Pixel Pass on Ko-fi"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#e2f5ff" d="M4 1h1v1h-1zM7 1h1v1h-1zM3 2h1v1h-1zM6 2h1v1h-1z"/><path fill="#ffffff" d="M1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM11 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM8 6h1v1h-1zM11 6h1v1h-1zM1 7h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM11 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM2 9h1v1h-1zM3 9h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1zM7 9h1v1h-1z"/><path class="glow" fill="#ffc2c1" d="M2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM8 5h1v1h-1zM2 6h1v1h-1zM8 6h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1z"/><path class="heart" fill="#ff5e5b" d="M3 5h1v1h-1zM4 5h1v1h-1zM6 5h1v1h-1zM7 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM5 8h1v1h-1z"/><path fill="#cfe6f2" d="M9 5h1v1h-1zM9 6h1v1h-1zM9 7h1v1h-1zM9 8h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM3 10h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1z"/></svg></a>
+      <button type="button" class="skybtn" id="skyBtn" aria-label="Toggle dark mode" title="Toggle dark mode"><svg class="sun" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#ffcf3f" d="M4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM7 3h1v1h-1zM3 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM3 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM7 5h1v1h-1zM8 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM3 7h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z"/><path fill="#fff1a0" d="M4 4h1v1h-1zM5 4h1v1h-1zM4 5h1v1h-1z"/><path fill="#f0a020" d="M8 6h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1z"/><path fill="#ffd85a" d="M5 0h1v1h-1zM6 0h1v1h-1zM1 1h1v1h-1zM10 1h1v1h-1zM2 2h1v1h-1zM9 2h1v1h-1zM0 5h1v1h-1zM11 5h1v1h-1zM0 6h1v1h-1zM11 6h1v1h-1zM2 9h1v1h-1zM9 9h1v1h-1zM1 10h1v1h-1zM10 10h1v1h-1zM5 11h1v1h-1zM6 11h1v1h-1z"/></svg><svg class="moon" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="#f0a020" d="M4 1h1v1h-1zM5 1h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM1 4h1v1h-1zM1 5h1v1h-1zM1 6h1v1h-1zM1 7h1v1h-1zM2 8h1v1h-1zM9 8h1v1h-1zM3 9h1v1h-1zM8 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1z"/><path fill="#ffcf3f" d="M4 2h1v1h-1zM4 3h1v1h-1zM2 4h1v1h-1zM4 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM2 7h1v1h-1zM3 7h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM4 9h1v1h-1zM5 9h1v1h-1zM6 9h1v1h-1zM7 9h1v1h-1z"/><path fill="#fff1a0" d="M3 3h1v1h-1zM3 4h1v1h-1z"/><path fill="#ffffff" d="M10 1h1v1h-1z"/><path fill="#cfd8ff" d="M11 7h1v1h-1z"/></svg></button>
+    </div>
+  </header>
+
+  <div class="tool">
+    <div class="stage-card">
+      <div class="stage empty" id="stage" aria-label="Before and after: move the pointer over the picture to compare">
+        <img id="srcImg" src="/*SAMPLE*/" alt="The picture you opened">
+        <canvas id="pxView" class="px" role="img" aria-label="Its pixel art"></canvas>
+        <i class="bar"></i><button type="button" class="tag l" data-side="picture" title="Show only the picture (click again to compare)">Picture</button><button type="button" class="tag r" data-side="pixel" title="Show only the pixel art (click again to compare)">Pixel art</button>
+        <span class="hint-tag" id="cutHint">Click or drag to keep the line there</span>
+        <span class="hint-tag note-tag" id="stageNote" role="status" hidden></span>
+      </div>
+      <div class="under">
+        <span class="stats" id="stats">–</span>
+        <div class="swatches" id="swatches" aria-label="Palette"></div>
+        <div class="actions">
+          <button class="btn" id="setBtn" type="button" title="Full screen with the settings under or beside the picture (Esc leaves)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
+          <button class="btn" id="fsBtn" type="button" title="Full screen: only the picture, Settings shows the sliders beside it or under it (Esc leaves)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5V3H6M10 3h3.5v3.5M13.5 10.5V14H10M6 14H2.5v-3.5"/></svg>Full screen</button>
+          <label class="btn" for="file"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3M4.5 6.5 8 3l3.5 3.5M3 13h10"/></svg>Open a picture</label>
+          <input type="file" id="file" class="file" accept="image/*">
+          <button class="btn" id="dlBig" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10"/></svg><span id="dlBigLabel">PNG ×4</span></button>
+          <button class="btn primary" id="dl" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10"/></svg><span id="dlLabel">PNG</span></button>
+        </div>
+      </div>
+      <div class="presets">
+        <div class="prow">
+          <label class="lab" for="preset">Preset</label>
+          <select id="preset"></select>
+          <div class="inline">
+            <input type="text" id="presetName" maxlength="40" placeholder="Name for these settings" aria-label="Name for a new preset">
+            <button type="button" class="btn small" id="presetSave">Save</button>
+          </div>
+          <button type="button" class="linkbtn" id="presetDelete" hidden>Delete this preset</button>
+        </div>
+        <details class="share" id="presetShare">
+          <summary>Share or import a preset</summary>
+          <label class="hint" for="presetCode">These settings as a code:</label>
+          <textarea id="presetCode" rows="2" readonly></textarea>
+          <button type="button" class="btn small" id="presetCopy">Copy the code</button>
+          <label class="hint" for="presetImport">Paste someone's code:</label>
+          <div class="inline">
+            <input type="text" id="presetImport" placeholder="pixelpass:…">
+            <button type="button" class="btn small" id="presetAdd">Add</button>
+          </div>
+        </details>
+        <p class="hint msg" id="presetMsg" aria-live="polite"></p>
+      </div>
+      <div class="fsbar">
+        <button type="button" class="btn small" id="fsPanel" aria-pressed="false" title="Show or hide the settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
+        <button type="button" class="btn small" id="fsExit" title="Leave the full view (Esc)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3H3M13 6h-3V3M10 13v-3h3M3 10h3v3"/></svg>Exit</button>
+      </div>
+    </div>
+
+    <form class="panel" id="panel" autocomplete="off">
+      <div class="group">
+        <label class="lab" for="palette">Palette</label>
+        <select id="palette">
+          <option value="own">Picked from the picture</option>
+          
+          <option value="db32">DawnBringer · 32</option>
+          <option value="endesga32">Endesga · 32</option>
+          <option value="sweetie16">Sweetie · 16</option>
+          <option value="pico8">PICO-8 · 16</option>
+          <option value="c64">Commodore 64 · 16</option>
+          <option value="gameboy">Game Boy · 4</option>
+          <option value="onebit">1-bit · black and white</option>
+        </select>
+      </div>
+      <div class="group">
+        <span class="lab" id="sizeLab">Pixel size</span>
+        <div class="sizerow">
+          <div class="seg sizes" id="size" role="group" aria-labelledby="sizeLab">
+            <button type="button" data-v="1" title="Same size: only the colours become pixel art">1</button>
+            <button type="button" data-v="2" title="Half: each pixel covers 2 × 2 of the picture">2</button>
+            <button type="button" data-v="3" title="A third">3</button>
+            <button type="button" data-v="4" title="A quarter: chunky but still detailed">4</button>
+            <button type="button" data-v="6" title="A sixth: chunky">6</button>
+            <button type="button" data-v="8" title="An eighth: very chunky">8</button>
+          </div>
+          <input type="range" id="sizeRange" min="1" max="16" step="0.5" aria-label="Pixel size, any value from 1 to 16" title="Any pixel size in between (the buttons set it to theirs)">
+          <output id="sizeOut" for="sizeRange"></output>
+        </div>
+        <p class="hint" id="gridInfo"></p>
+      </div>
+      <div class="slider" id="colorsRow"><label for="colors">Colours</label><output id="colorsOut" for="colors"></output><input type="range" id="colors" min="4" max="64" step="1"></div>
+      <div class="slider"><label for="dither">Dither</label><output id="ditherOut" for="dither"></output><input type="range" id="dither" min="0" max="1" step="0.05"></div>
+      <details class="more" id="more">
+        <summary>More settings</summary>
+        <div class="inner">
+      <div class="slider"><label for="edges">Crisp edges</label><output id="edgesOut" for="edges"></output><input type="range" id="edges" min="0.02" max="0.2" step="0.01"></div>
+      <div class="slider"><label for="contrast">Contrast</label><output id="contrastOut" for="contrast"></output><input type="range" id="contrast" min="0.8" max="1.4" step="0.02"></div>
+      <div class="slider"><label for="sat">Saturation</label><output id="satOut" for="sat"></output><input type="range" id="sat" min="0.5" max="1.6" step="0.02"></div>
+      <div class="slider" id="boostRow"><label for="boost">Detail boost</label><output id="boostOut" for="boost"></output><input type="range" id="boost" min="0" max="1.5" step="0.05"></div>
+      <div class="slider" id="keepRow"><label for="keep">Keep specks</label><output id="keepOut" for="keep"></output><input type="range" id="keep" min="0.05" max="1" step="0.01" title="Specks that stand out more than this stay; at the right end every speck melts away"></div>
+      <label class="check"><input type="checkbox" id="clean"> Clean up lone pixels</label>
+      <label class="check" title="Lit edges, windows and stars thinner than one pixel are kept (off: they melt into the big shapes)"><input type="checkbox" id="thin"> Keep thin details</label>
+      <label class="check" title="Small colourful areas get their own colours like big ones (off: the picture's own colour mix, light and dark weigh more)"><input type="checkbox" id="balance"> Balance the colours</label>
+        </div>
+      </details>
+      <p class="hint keys">Drop or paste (Ctrl+V) a picture anywhere.<br>Use Ctrl+C to copy the result.</p>
+      <button type="button" class="reset" id="reset">Back to the defaults</button>
+    </form>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h2>What happens to your picture</h2>
+      <ol>
+        <li>It's laid on a grid: at pixel size 2, each new pixel covers 2 × 2 of the original.</li>
+        <li>Each pixel takes the colour of the larger half of its cell, light or dark, so edges stay sharp. Small details that stand out, like a lit window, are kept.</li>
+        <li>Contrast and saturation get a small lift, then a palette is picked from the picture, or you choose a fixed one.</li>
+        <li>Smooth gradients get an ordered dither; edges get one solid colour.</li>
+        <li>Stray specks blend into their surroundings, unless they stand out like a star.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Is it real pixel art?</h2>
+      <p><b>In format, yes:</b> every pixel sits on the grid in one of a few colours, so it scales up crisp at any whole multiple.</p>
+      <p><b>In craft, no:</b> an algorithm placed the pixels, so busy areas keep some speckle an artist would clean up. Use it as a strong starting point.</p>
+    </div>
+  </section>
+  <footer class="foot"><!--SITELINKS--><button type="button" class="autosky" id="autoSky" title="Follow your clock again: day from 7:00 to 19:00">Automatic day and night</button></footer>
+</div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- palettes
+const PALETTES = {
+  
+  endesga32: ["be4a2f","d77643","ead4aa","e4a672","b86f50","733e39","3e2731","a22633","e43b44","f77622","feae34","fee761","63c74d","3e8948","265c42","193c3e","124e89","0099db","2ce8f5","ffffff","c0cbdc","8b9bb4","5a6988","3a4466","262b44","181425","ff0044","68386c","b55088","f6757a","e8b796","c28569"],
+  sweetie16: ["1a1c2c","5d275d","b13e53","ef7d57","ffcd75","a7f070","38b764","257179","29366f","3b5dc9","41a6f6","73eff7","f4f4f4","94b0c2","566c86","333c57"],
+  c64: ["000000","ffffff","68372b","70a4b2","6f3d86","588d43","352879","b8c76f","6f4f25","433900","9a6759","444444","6c6c6c","9ad284","6c5eb5","959595"],
+  gameboy: ["0f380f","306230","8bac0f","9bbc0f"],
+  onebit: ["000000","ffffff"],
+  db32: ["000000","222034","45283c","663931","8f563b","df7126","d9a066","eec39a","fbf236","99e550","6abe30","37946e","4b692f","524b24","323c39","3f3f74","306082","5b6ee1","639bff","5fcde4","cbdbfc","ffffff","9badb7","847e87","696a6a","595652","76428a","ac3232","d95763","d77bba","8f974a","8a6f30"],
+  pico8: ["000000","1d2b53","7e2553","008751","ab5236","5f574f","c2c3c7","fff1e8","ff004d","ffa300","ffec27","00e436","29adff","83769c","ff77a8","ffccaa"],
+};
+const DEFAULTS = { palette: "own", size: 2, thin: true, balance: true, colors: 32, dither: 0.6, edges: 0.06, contrast: 1.08, sat: 1.12, boost: 0, keep: 0.2, clean: true };
+const MAX_ROWS = 480, MAX_PIXELS = 480 * 854;      // the work stays a second or two on a phone
+const BLOCK = 4, SPECK = 2;
+
+// ---------------------------------------------------------------- colour (OKLab)
+const LIN = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function toLab(r, g, b, out, o) {
+  const R = LIN[r], G = LIN[g], B = LIN[b];
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  out[o] = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
+  out[o + 1] = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+  out[o + 2] = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+}
+const enc = c => { c = Math.min(1, Math.max(0, c)); return Math.round((c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055) * 255); };
+function labToRgb(L, a, b) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [enc(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s), enc(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s), enc(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)];
+}
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+
+// ---------------------------------------------------------------- the pixel pass
+// 1. block reduce: per 4x4 block the larger side of a lightness split (maj); with thin details (det) the smaller side
+//    wins where it covers a quarter of the block and stands out from the 3x3 blocks around it. Both come from one pass.
+//    Transparency (al: alpha per sub-pixel, null when there is none): pixel art has no half-transparent pixels, so a
+//    cell is transparent when less than half of it is covered, and only its covered sub-pixels decide its colour.
+function blockReduce(lab, al, w, h) {
+  const k = BLOCK, n = k * k, W = w * k, N = w * h;
+  const maj = new Float32Array(N * 3), mino = new Float32Array(N * 3), frac = new Float32Array(N), bmL = new Float32Array(N), spread = new Float32Array(N);
+  const alpha = al ? new Uint8Array(N) : null;
+  for (let by = 0; by < h; by++) for (let bx = 0; bx < w; bx++) {
+    let sum = 0, mn = 9, mx = -9, cnt = 0, asum = 0;
+    for (let yy = 0; yy < k; yy++) for (let xx = 0; xx < k; xx++) {
+      const q = (by * k + yy) * W + bx * k + xx;
+      if (al) { asum += al[q]; if (al[q] < 128) continue; }
+      const L = lab[q * 3]; sum += L; cnt++; if (L < mn) mn = L; if (L > mx) mx = L;
+    }
+    if (al) { if (asum < 128 * n || !cnt) continue; alpha[by * w + bx] = 1; }
+    const mean = sum / cnt;
+    let nh = 0, h0 = 0, h1 = 0, h2 = 0, l0 = 0, l1 = 0, l2 = 0;
+    for (let yy = 0; yy < k; yy++) for (let xx = 0; xx < k; xx++) {
+      const q = (by * k + yy) * W + bx * k + xx;
+      if (al && al[q] < 128) continue;
+      const p = q * 3;
+      if (lab[p] >= mean) { nh++; h0 += lab[p]; h1 += lab[p + 1]; h2 += lab[p + 2]; } else { l0 += lab[p]; l1 += lab[p + 1]; l2 += lab[p + 2]; }
+    }
+    const i = (by * w + bx) * 3, nl = cnt - nh, dh = Math.max(nh, 1), dl = Math.max(nl, 1);
+    if (nh * 2 >= cnt) { maj[i] = h0 / dh; maj[i + 1] = h1 / dh; maj[i + 2] = h2 / dh; mino[i] = l0 / dl; mino[i + 1] = l1 / dl; mino[i + 2] = l2 / dl; }
+    else { maj[i] = l0 / dl; maj[i + 1] = l1 / dl; maj[i + 2] = l2 / dl; mino[i] = h0 / dh; mino[i + 1] = h1 / dh; mino[i + 2] = h2 / dh; }
+    frac[i / 3] = Math.min(nh, nl) / cnt; spread[i / 3] = mx - mn; bmL[i / 3] = mean;
+  }
+  const det = maj.slice();
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const b = y * w + x, i = b * 3;
+    if (frac[b] < 0.25 || (alpha && !alpha[b])) continue;
+    let ctx = 0, cn = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const q = Math.min(h - 1, Math.max(0, y + dy)) * w + Math.min(w - 1, Math.max(0, x + dx));
+      if (alpha && !alpha[q]) continue;
+      ctx += bmL[q]; cn++;
+    }
+    ctx /= cn;
+    if (Math.abs(mino[i] - ctx) > Math.abs(maj[i] - ctx) * 1.3 && Math.abs(mino[i] - maj[i]) > 0.06) { det[i] = mino[i]; det[i + 1] = mino[i + 1]; det[i + 2] = mino[i + 2]; }
+  }
+  if (alpha) {   // transparent cells get the covered cells' mean colour, so the detail boost sees no false edges there
+    const m = [0, 0, 0]; let cn = 0;
+    for (let b = 0; b < N; b++) if (alpha[b]) { m[0] += maj[b * 3]; m[1] += maj[b * 3 + 1]; m[2] += maj[b * 3 + 2]; cn++; }
+    for (let b = 0; b < N; b++) if (!alpha[b]) for (let c = 0; c < 3; c++) { maj[b * 3 + c] = det[b * 3 + c] = cn ? m[c] / cn : 0.5 * !c; }
+  }
+  return { maj, det, spread, alpha };
+}
+// 2. palette: k-means in OKLab, up to 400 samples per colour bin (lightness x hue), so a small colourful area counts
+//    like a big grey one (Low pixel: the picture's own mix)
+function kmeans(x, N, k, even, lw, alpha) {
+  const rnd = mulberry32(12345), wv = [lw, 1, 1];
+  const pick = [];
+  if (even) {
+    const bins = new Map();
+    const cl = (v, n) => Math.min(n - 1, Math.max(0, v));
+    for (let i = 0; i < N; i++) {
+      if (alpha && !alpha[i]) continue;
+      const key = (cl(Math.floor(x[i * 3] * 10), 10) * 20 + cl(Math.floor((x[i * 3 + 1] + 0.4) / 0.04), 20)) * 20 + cl(Math.floor((x[i * 3 + 2] + 0.4) / 0.04), 20);
+      let b = bins.get(key); if (!b) { b = []; bins.set(key, b); } b.push(i);
+    }
+    for (const key of [...bins.keys()].sort((p, q) => p - q)) {
+      const ids = bins.get(key);
+      for (let j = 0; j < Math.min(ids.length, 400); j++) { const r = j + Math.floor(rnd() * (ids.length - j)); [ids[j], ids[r]] = [ids[r], ids[j]]; pick.push(ids[j]); }
+    }
+  } else {
+    const ids = [];
+    for (let i = 0; i < N; i++) if (!alpha || alpha[i]) ids.push(i);
+    const M = ids.length, m = Math.min(M, 24000);
+    for (let j = 0; j < m; j++) { const r = j + Math.floor(rnd() * (M - j)); [ids[j], ids[r]] = [ids[r], ids[j]]; pick.push(ids[j]); }
+  }
+  const S = pick.length, sub = new Float32Array(S * 3);
+  pick.forEach((p, i) => { for (let c = 0; c < 3; c++) sub[i * 3 + c] = x[p * 3 + c] * wv[c]; });
+  const cent = new Float32Array(k * 3), d2 = new Float32Array(S);
+  const first = Math.floor(rnd() * S);
+  for (let c = 0; c < 3; c++) cent[c] = sub[first * 3 + c];
+  for (let i = 0; i < S; i++) d2[i] = (sub[i * 3] - cent[0]) ** 2 + (sub[i * 3 + 1] - cent[1]) ** 2 + (sub[i * 3 + 2] - cent[2]) ** 2;
+  for (let j = 1; j < k; j++) {
+    let tot = 0; for (let i = 0; i < S; i++) tot += d2[i];
+    let r = rnd() * tot, ch = S - 1;
+    if (tot > 0) { for (let i = 0; i < S; i++) { r -= d2[i]; if (r <= 0) { ch = i; break; } } } else ch = Math.floor(rnd() * S);
+    for (let c = 0; c < 3; c++) cent[j * 3 + c] = sub[ch * 3 + c];
+    for (let i = 0; i < S; i++) d2[i] = Math.min(d2[i], (sub[i * 3] - cent[j * 3]) ** 2 + (sub[i * 3 + 1] - cent[j * 3 + 1]) ** 2 + (sub[i * 3 + 2] - cent[j * 3 + 2]) ** 2);
+  }
+  const lab = new Int32Array(S), acc = new Float64Array(k * 3), cnt = new Int32Array(k);
+  for (let it = 0; it < 16; it++) {
+    for (let i = 0; i < S; i++) {
+      let best = 0, bd = Infinity;
+      for (let j = 0; j < k; j++) { const d = (sub[i * 3] - cent[j * 3]) ** 2 + (sub[i * 3 + 1] - cent[j * 3 + 1]) ** 2 + (sub[i * 3 + 2] - cent[j * 3 + 2]) ** 2; if (d < bd) { bd = d; best = j; } }
+      lab[i] = best;
+    }
+    acc.fill(0); cnt.fill(0);
+    for (let i = 0; i < S; i++) { const j = lab[i]; cnt[j]++; acc[j * 3] += sub[i * 3]; acc[j * 3 + 1] += sub[i * 3 + 1]; acc[j * 3 + 2] += sub[i * 3 + 2]; }
+    for (let j = 0; j < k; j++) if (cnt[j]) for (let c = 0; c < 3; c++) cent[j * 3 + c] = acc[j * 3 + c] / cnt[j];
+  }
+  const pal = [];
+  for (let j = 0; j < k; j++) pal.push([cent[j * 3] / wv[0], cent[j * 3 + 1], cent[j * 3 + 2]]);
+  return pal;
+}
+// 3. specks: clusters of at most 2 pixels (connected by edges or corners) take their surroundings' most common colour,
+//    unless they stand out by more than `keep` in lightness
+function cleanSpecks(idx, w, h, light, keep) {
+  const seen = new Uint8Array(w * h), out = idx.slice(), comp = [], stack = [];
+  for (let start = 0; start < w * h; start++) {
+    if (seen[start]) continue;
+    const c = idx[start]; comp.length = 0; stack.length = 0; stack.push(start); seen[start] = 1; let big = false;
+    while (stack.length) {
+      const p = stack.pop(); comp.push(p); if (comp.length > SPECK) big = true;
+      const y = (p / w) | 0, x = p - y * w;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dy && !dx) continue;
+        const yy = y + dy, xx = x + dx;
+        if (yy < 0 || yy >= h || xx < 0 || xx >= w) continue;
+        const q = yy * w + xx;
+        if (!seen[q] && idx[q] === c) { seen[q] = 1; stack.push(q); }
+      }
+    }
+    if (big || c < 0) continue;            // transparent pixels (-1) stay as they are
+    const count = new Map(), mine = new Set(comp);
+    for (const p of comp) {
+      const y = (p / w) | 0, x = p - y * w;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = y + dy, xx = x + dx;
+        if ((dy || dx) && yy >= 0 && yy < h && xx >= 0 && xx < w && !mine.has(yy * w + xx)) { const v = idx[yy * w + xx]; if (v >= 0) count.set(v, (count.get(v) || 0) + 1); }
+      }
+    }
+    if (!count.size) continue;
+    let rep = -1, rc = -1;
+    for (const [v, n] of count) if (n > rc || (n === rc && v < rep)) { rep = v; rc = n; }
+    if (Math.abs(light[c] - light[rep]) <= keep) for (const p of comp) out[p] = rep;
+  }
+  return out;
+}
+
+// detail boost: lightness minus its Gaussian blur (sigma 1.2, edges clamped)
+function boostDetail(lab, w, h, amount) {
+  const sigma = 1.2, r = Math.ceil(sigma * 3), k = [];
+  let ks = 0;
+  for (let i = -r; i <= r; i++) { const v = Math.exp(-0.5 * (i / sigma) ** 2); k.push(v); ks += v; }
+  for (let i = 0; i < k.length; i++) k[i] /= ks;
+  const L = new Float64Array(w * h), tmp = new Float64Array(w * h), bl = new Float64Array(w * h);
+  for (let i = 0; i < w * h; i++) L[i] = lab[i * 3];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0; for (let i = -r; i <= r; i++) s += k[i + r] * L[Math.min(h - 1, Math.max(0, y + i)) * w + x]; tmp[y * w + x] = s; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0; for (let i = -r; i <= r; i++) s += k[i + r] * tmp[y * w + Math.min(w - 1, Math.max(0, x + i))]; bl[y * w + x] = s; }
+  for (let i = 0; i < w * h; i++) lab[i * 3] = L[i] + amount * (L[i] - bl[i]);
+}
+// once per picture and grid size: the picture at 4x the grid in OKLab, reduced to the grid (the large buffers are dropped)
+function prepare(rgba, w, h) {
+  const big = new Float32Array(w * h * BLOCK * BLOCK * 3);
+  for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) toLab(rgba[i], rgba[i + 1], rgba[i + 2], big, j);
+  let al = null;
+  for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) { al = new Uint8Array(rgba.length / 4); break; }
+  if (al) for (let i = 3, j = 0; i < rgba.length; i += 4, j++) al[j] = rgba[i];
+  return blockReduce(big, al, w, h);
+}
+// per change of a setting: detail boost, grade, palette, dither, specks
+function pixelate(prep, w, h, o) {
+  const N = w * h, lw = o.balance ? 1.0 : 1.6;
+  const lab = (o.thin ? prep.det : prep.maj).slice(), spread = prep.spread, A = prep.alpha;
+  if (A && !A.some(v => v)) return { img: new ImageData(w, h), used: [] };   // nothing covered at all
+  if (o.boost) boostDetail(lab, w, h, o.boost);
+  for (let i = 0; i < N; i++) { lab[i * 3] = (lab[i * 3] - 0.5) * o.contrast + 0.5; lab[i * 3 + 1] *= o.sat; lab[i * 3 + 2] *= o.sat; }
+  let pal;
+  if (o.palette === "own") pal = kmeans(lab, N, o.colors, o.balance, lw, A);
+  else pal = PALETTES[o.palette].map(hx => { const v = new Float32Array(3); toLab(parseInt(hx.slice(0, 2), 16), parseInt(hx.slice(2, 4), 16), parseInt(hx.slice(4, 6), 16), v, 0); return [v[0], v[1], v[2]]; });
+  pal.sort((a, b) => a[0] - b[0]);
+  const P = pal.length, idx = new Int32Array(N);
+  // 4. ordered dither between the two nearest colours, only where the picture is smooth
+  const L = (j, own) => A && !A[j] ? own : lab[j * 3];     // a transparent neighbour makes no edge
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, l0 = lab[i * 3], a0 = lab[i * 3 + 1], b0 = lab[i * 3 + 2];
+    if (A && !A[i]) { idx[i] = -1; continue; }
+    let i1 = 0, i2 = 0, d1 = Infinity, d2 = Infinity;
+    for (let j = 0; j < P; j++) {
+      const d = ((l0 - pal[j][0]) * lw) ** 2 + (a0 - pal[j][1]) ** 2 + (b0 - pal[j][2]) ** 2;
+      if (d < d1) { d2 = d1; i2 = i1; d1 = d; i1 = j; } else if (d < d2) { d2 = d; i2 = j; }
+    }
+    const p1 = pal[i1], p2 = pal[i2], s0 = p2[0] - p1[0], s1 = p2[1] - p1[1], s2 = p2[2] - p1[2];
+    let t = ((l0 - p1[0]) * s0 + (a0 - p1[1]) * s1 + (b0 - p1[2]) * s2) / Math.max(s0 * s0 + s1 * s1 + s2 * s2, 1e-9);
+    t = Math.min(1, Math.max(0, t));
+    const gx = x === 0 ? L(i + 1, l0) - l0 : x === w - 1 ? l0 - L(i - 1, l0) : (L(i + 1, l0) - L(i - 1, l0)) / 2;
+    const gy = y === 0 ? L(i + w, l0) - l0 : y === h - 1 ? l0 - L(i - w, l0) : (L(i + w, l0) - L(i - w, l0)) / 2;
+    const edge = Math.max(spread[i], Math.hypot(gx, gy) * 2);
+    const d = o.dither * Math.min(1, Math.max(0, 1 - edge / Math.max(o.edges, 1e-6)));
+    const tt = Math.min(1, Math.max(0, (t - 0.5) / Math.max(d, 1e-3) + 0.5));
+    idx[i] = tt > BAYER[(y % 4) * 4 + (x % 4)] ? i2 : i1;
+  }
+  const light = pal.map(p => p[0]);
+  const fin = o.clean ? cleanSpecks(idx, w, h, light, o.keep >= 1 ? 9 : o.keep) : idx;
+  const rgb = pal.map(p => labToRgb(p[0], p[1], p[2]));
+  const img = new ImageData(w, h), used = new Set();
+  for (let i = 0; i < N; i++) {
+    if (fin[i] < 0) continue;                // transparent: stays 0, 0, 0, 0
+    const c = rgb[fin[i]]; used.add(fin[i]); img.data[i * 4] = c[0]; img.data[i * 4 + 1] = c[1]; img.data[i * 4 + 2] = c[2]; img.data[i * 4 + 3] = 255;
+  }
+  return { img, used: [...used].sort((a, b) => light[a] - light[b]).map(j => rgb[j]) };
+}
+
+// ---------------------------------------------------------------- page
+const S = { src: null, opts: { ...DEFAULTS }, timer: 0, cache: null, result: null };
+const TOUCH = matchMedia("(hover: none)").matches;     // a phone or a tablet: hints say tap, nothing follows a pointer
+const stage = document.getElementById("stage"), srcImg = document.getElementById("srcImg"), pxView = document.getElementById("pxView");
+const SLIDERS = [["colors", v => v], ["dither", v => (+v).toFixed(2)], ["edges", v => (+v).toFixed(2)], ["contrast", v => (+v).toFixed(2)], ["sat", v => (+v).toFixed(2)], ["boost", v => (+v).toFixed(2)], ["keep", v => (+v >= 1 ? "all" : (+v).toFixed(2))]];
+
+function syncControls() {
+  const o = S.opts;
+  for (const [k, fmt] of SLIDERS) { const el = document.getElementById(k); el.value = o[k]; document.getElementById(k + "Out").textContent = fmt(o[k]); }
+  document.getElementById("palette").value = o.palette;
+  document.getElementById("clean").checked = !!o.clean;
+  document.getElementById("thin").checked = !!o.thin;
+  document.getElementById("balance").checked = !!o.balance;
+  document.getElementById("colorsRow").classList.toggle("off", o.palette !== "own");
+  document.getElementById("colors").disabled = o.palette !== "own";
+  document.getElementById("keepRow").classList.toggle("off", !o.clean);
+  document.getElementById("keep").disabled = !o.clean;
+  document.querySelectorAll("#size button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.v === o.size)));
+  document.getElementById("sizeRange").value = o.size;
+  document.getElementById("sizeOut").textContent = `${Number.isInteger(o.size) ? o.size : o.size.toFixed(1)} px`;
+  gridInfo();
+}
+// the result's size: the picture over the pixel size (x2: half), within what a phone works through in a second or two
+function gridSize() {
+  const o = S.opts, W0 = S.src ? S.src.naturalWidth : 1600, H0 = S.src ? S.src.naturalHeight : 720;
+  let h = Math.round(H0 / Math.max(1, o.size));
+  const cap = Math.min(MAX_ROWS, H0, Math.floor(Math.sqrt(MAX_PIXELS * H0 / W0)));
+  const capped = h > cap;
+  h = Math.max(8, Math.min(h, cap));
+  return { w: Math.max(8, Math.round(h * W0 / H0)), h, W0, H0, capped };
+}
+function gridInfo() {
+  const g = gridSize(), f = g.H0 / g.h;
+  document.getElementById("gridInfo").textContent = !S.src ? "" :
+    `${g.w} × ${g.h} pixels: each covers ${f < 9.95 ? f.toFixed(1) : Math.round(f)} × ${f < 9.95 ? f.toFixed(1) : Math.round(f)} pixels of your ${g.W0} × ${g.H0} picture` + (g.capped ? " (as many as it allows)." : ".");
+}
+function changed() {
+  try { localStorage.setItem("pixelpass.opts", JSON.stringify(S.opts)); } catch (e) { /* no storage */ }
+  syncControls(); renderPresets(); schedule();
+}
+for (const [k, fmt] of SLIDERS) document.getElementById(k).addEventListener("input", e => { S.opts[k] = +e.target.value; document.getElementById(k + "Out").textContent = fmt(e.target.value); changed(); });
+document.getElementById("palette").addEventListener("change", e => { S.opts.palette = e.target.value; changed(); });
+document.getElementById("clean").addEventListener("change", e => { S.opts.clean = e.target.checked; changed(); });
+document.getElementById("thin").addEventListener("change", e => { S.opts.thin = e.target.checked; changed(); });
+document.getElementById("balance").addEventListener("change", e => { S.opts.balance = e.target.checked; changed(); });
+document.querySelectorAll("#size button").forEach(b => b.addEventListener("click", () => { S.opts.size = +b.dataset.v; changed(); }));
+document.getElementById("sizeRange").addEventListener("input", e => { S.opts.size = +e.target.value; changed(); });
+document.getElementById("reset").addEventListener("click", () => { S.opts = { ...DEFAULTS }; changed(); });
+document.getElementById("panel").addEventListener("submit", e => e.preventDefault());
+
+// the preview: the result drawn once per result or size change at exactly the screen pixels it covers
+// (nearest pixel when enlarging; smooth when the result has more pixels than the screen area, which would drop some)
+let viewSize = null;
+function paintView() {
+  if (!S.result) return;
+  const r = pxView.getBoundingClientRect();     // until the observer has measured (it waits while the tab is hidden)
+  const [W, H] = viewSize || [Math.round(r.width * devicePixelRatio), Math.round(r.height * devicePixelRatio)];
+  if (!W || !H) return;
+  if (pxView.width !== W || pxView.height !== H) { pxView.width = W; pxView.height = H; }
+  const x = pxView.getContext("2d");
+  x.imageSmoothingEnabled = W < S.result.w; x.imageSmoothingQuality = "high";
+  x.clearRect(0, 0, W, H); x.drawImage(S.result.canvas, 0, 0, W, H);
+}
+{
+  const ro = new ResizeObserver(([e]) => {
+    const d = e.devicePixelContentBoxSize && e.devicePixelContentBoxSize[0];
+    viewSize = d ? [d.inlineSize, d.blockSize] : [Math.round(e.contentRect.width * devicePixelRatio), Math.round(e.contentRect.height * devicePixelRatio)];
+    if (viewSize[0] && viewSize[1]) paintView();
+  });
+  try { ro.observe(pxView, { box: "device-pixel-content-box" }); } catch (e) { ro.observe(pxView); }
+}
+// the browser may wipe a canvas (graphics reset, a phone putting the tab away): draw it again when it hands it back
+pxView.addEventListener("contextrestored", paintView);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) paintView(); });
+const fileSize = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+function schedule() { clearTimeout(S.timer); stage.classList.add("busy"); S.timer = setTimeout(run, 60); }
+function run() {
+  if (!S.src) return;
+  const o = S.opts;
+  const { w, h } = gridSize();
+  const key = `${w}x${h}`;
+  if (!S.cache || S.cache.key !== key) {
+    const c = document.createElement("canvas"); c.width = w * BLOCK; c.height = h * BLOCK;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+    x.drawImage(S.src, 0, 0, c.width, c.height);
+    S.cache = { key, prep: prepare(x.getImageData(0, 0, c.width, c.height).data, w, h) };
+    if (S.viewOf !== S.src) {                    // the "before" side: the picture at a size the screen can show
+      if (S.src.naturalWidth <= 1600) { if (srcImg.src !== S.src.src) srcImg.src = S.src.src; }   // small enough as it is
+      else {
+        const vw = 1600, v = document.createElement("canvas");
+        v.width = vw; v.height = Math.round(vw * S.src.naturalHeight / S.src.naturalWidth);
+        const vx = v.getContext("2d"); vx.imageSmoothingQuality = "high"; vx.drawImage(S.src, 0, 0, v.width, v.height);
+        srcImg.src = S.cache.prep.alpha ? v.toDataURL("image/png") : v.toDataURL("image/jpeg", 0.85);   // keep transparency
+      }
+      S.viewOf = S.src;
+    }
+    stage.style.setProperty("--ratio", (w / h).toFixed(4));
+  }
+  const res = pixelate(S.cache.prep, w, h, o);
+  // kept in memory rather than on the graphics chip: Chrome on Android once dropped it there (the pixel art side went blank)
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d", { willReadFrequently: true }).putImageData(res.img, 0, 0);
+  S.result = { canvas: c, w, h };
+  paintView(); stage.classList.remove("empty");
+  const sw = document.getElementById("swatches"); sw.replaceChildren();
+  for (const [r, g, b] of res.used) { const i = document.createElement("i"); const hx = [r, g, b].map(v => v.toString(16).padStart(2, "0")).join(""); i.style.background = `#${hx}`; i.title = `#${hx}`; sw.append(i); }
+  const scale = Math.max(2, Math.round(1080 / h));
+  S.scale = scale;
+  // the PNG's file size arrives a moment later (encoding is asynchronous); a newer result replaces an older count.
+  // Hovering it shows the original's size.
+  const stats = document.getElementById("stats"), line = `${w} × ${h} px · ${res.used.length} colours`, mine = S.statsFor = c;
+  stats.textContent = line;
+  stats.title = `Original size: ${S.src.naturalWidth} × ${S.src.naturalHeight} px${S.srcBytes ? ` · ${fileSize(S.srcBytes)}` : ""}`;
+  c.toBlob(b => { if (b && S.statsFor === mine) stats.textContent = `${line} · ${fileSize(b.size)}`; }, "image/png");
+  document.getElementById("dlLabel").textContent = `PNG ${w}×${h}`;
+  document.getElementById("dlBigLabel").textContent = `PNG ×${scale}`;
+  gridInfo();
+  stage.classList.remove("busy");
+}
+
+// presets: built in, and the visitor's own (kept in this browser only); any of them travels as a short code
+const LOW = { thin: false, balance: false, keep: 1, boost: 0 };           // the Low pixel look
+const BUILTIN = [
+  ["Standard", {}],
+  ["Low pixel", { ...LOW, size: 4 }],
+  ["Chunky", { ...LOW, size: 8, colors: 16 }],
+  ["Flat colours, no dither", { size: 4, colors: 16, dither: 0 }],
+  ["Portrait detail", { boost: 0.6, keep: 0.15 }],
+  ["Game Boy", { palette: "gameboy", size: 4, dither: 0.8, edges: 0.12, contrast: 1.15 }],
+  ["PICO-8", { palette: "pico8", size: 6, dither: 0.4 }],
+  ["Sweetie 16", { palette: "sweetie16", size: 4 }],
+  ["Endesga 32", { palette: "endesga32", size: 3 }],
+  ["1-bit", { palette: "onebit", size: 3, dither: 1, edges: 0.2, contrast: 1.15 }],
+  
+];
+const PRESET_KEY = "pixelpass.presets";
+function cleanOpts(o) {
+  const out = {};
+  for (const k of Object.keys(DEFAULTS)) {
+    const v = o ? o[k] : undefined;
+    if (v === undefined || typeof v !== typeof DEFAULTS[k]) continue;
+    if (typeof v === "number" && !Number.isFinite(v)) continue;
+    if (k === "size" && !(v >= 1 && v <= 16)) continue;
+    if (k === "palette" && v !== "own" && !PALETTES[v]) continue;
+    out[k] = v;
+  }
+  return out;
+}
+const full = o => ({ ...DEFAULTS, ...cleanOpts(o) });
+const sameOpts = (a, b) => Object.keys(DEFAULTS).every(k => a[k] === b[k]);
+function userPresets() {
+  try { const a = JSON.parse(localStorage.getItem(PRESET_KEY) || "[]"); return Array.isArray(a) ? a.filter(p => p && typeof p.name === "string" && p.opts) : []; }
+  catch (e) { return []; }
+}
+function storeUser(list) { try { localStorage.setItem(PRESET_KEY, JSON.stringify(list)); return true; } catch (e) { return false; } }
+const say = t => { document.getElementById("presetMsg").textContent = t; };
+function encodeCode(name, opts) {
+  return "pixelpass:" + btoa(unescape(encodeURIComponent(JSON.stringify({ n: name, o: cleanOpts(opts) }))));
+}
+function decodeCode(code) {
+  const raw = String(code || "").trim().replace(/^pixelpass:/, "");
+  const d = JSON.parse(decodeURIComponent(escape(atob(raw))));
+  if (!d || typeof d !== "object" || typeof d.o !== "object") throw new Error("not a preset");
+  return { name: String(d.n || "Shared preset").slice(0, 40), opts: cleanOpts(d.o) };
+}
+let pendingDelete = 0;
+function renderPresets() {
+  const sel = document.getElementById("preset"), mine = userPresets(), o = S.opts;
+  sel.replaceChildren();
+  const matches = [];
+  const add = (parent, value, label, opts) => { const op = document.createElement("option"); op.value = value; op.textContent = label; parent.append(op); if (sameOpts(full(opts), o)) matches.push([value, label]); };
+  const gb = document.createElement("optgroup"); gb.label = "Built in"; sel.append(gb);
+  BUILTIN.forEach(([n, p], i) => add(gb, "b" + i, n, p));
+  if (mine.length) { const gu = document.createElement("optgroup"); gu.label = "Yours"; sel.append(gu); mine.forEach((p, i) => add(gu, "u" + i, p.name, p.opts)); }
+  const chosen = ((matches.find(([, label]) => label === S.pickName) || matches[0]) || [""])[0];
+  if (!chosen) { const op = document.createElement("option"); op.value = ""; op.textContent = "Your current settings"; sel.prepend(op); }
+  sel.value = chosen;
+  const del = document.getElementById("presetDelete");
+  del.hidden = !chosen.startsWith("u"); del.textContent = "Delete this preset"; del.classList.remove("warn"); pendingDelete = 0;
+  const name = chosen ? sel.selectedOptions[0].textContent : (document.getElementById("presetName").value.trim() || "My preset");
+  document.getElementById("presetCode").value = encodeCode(name, o);
+}
+document.getElementById("preset").addEventListener("change", e => {
+  const v = e.target.value; if (!v) return;
+  S.pickName = e.target.selectedOptions[0].textContent;
+  const p = v[0] === "b" ? BUILTIN[+v.slice(1)][1] : (userPresets()[+v.slice(1)] || {}).opts;
+  S.opts = full(p); say(""); changed();
+});
+document.getElementById("presetSave").addEventListener("click", () => {
+  const input = document.getElementById("presetName"), name = input.value.trim().slice(0, 40);
+  if (!name) { input.focus(); say("Give the preset a name first."); return; }
+  const list = userPresets().filter(p => p.name !== name);
+  list.push({ name, opts: cleanOpts(S.opts) });
+  if (!storeUser(list)) { say("This browser does not allow saving here. Use Share to keep the code instead."); return; }
+  input.value = ""; S.pickName = name; say(`Saved “${name}” in this browser.`); renderPresets();
+});
+document.getElementById("presetDelete").addEventListener("click", () => {
+  const v = document.getElementById("preset").value, i = +v.slice(1), list = userPresets(), del = document.getElementById("presetDelete");
+  if (!v.startsWith("u") || !list[i]) return;
+  if (!pendingDelete) { pendingDelete = setTimeout(() => { pendingDelete = 0; del.textContent = "Delete this preset"; del.classList.remove("warn"); }, 4000); del.textContent = `${TOUCH ? "Tap" : "Click"} again to delete “${list[i].name}”`; del.classList.add("warn"); return; }
+  clearTimeout(pendingDelete);
+  const name = list[i].name; list.splice(i, 1); storeUser(list); say(`Deleted “${name}”.`); renderPresets();
+});
+document.getElementById("presetCopy").addEventListener("click", () => {
+  const ta = document.getElementById("presetCode");
+  const fallback = () => { ta.focus(); ta.select(); say("Select the code and copy it."); };
+  try { navigator.clipboard.writeText(ta.value).then(() => say("Code copied."), fallback); } catch (e) { fallback(); }
+});
+document.getElementById("presetAdd").addEventListener("click", () => {
+  const input = document.getElementById("presetImport");
+  let p;
+  try { p = decodeCode(input.value); } catch (e) { say("That is not a Pixel Pass preset code."); return; }
+  const list = userPresets(), opts = full(p.opts);
+  const have = list.find(q => sameOpts(full(q.opts), opts)) || BUILTIN.map(([n, o]) => ({ name: n, opts: o })).find(q => sameOpts(full(q.opts), opts));
+  if (have) { input.value = ""; S.pickName = have.name; S.opts = opts; changed(); say(`You already have it: “${have.name}”.`); return; }
+  let name = p.name, n = 2;
+  while (list.some(q => q.name === name)) name = `${p.name} (${n++})`;
+  list.push({ name, opts: p.opts });
+  if (!storeUser(list)) say("This browser does not allow saving here; the settings are applied for now.");
+  else say(`Added “${name}”.`);
+  input.value = ""; S.pickName = name; S.opts = opts; changed();
+});
+document.getElementById("presetName").addEventListener("input", () => { if (!document.getElementById("preset").value) renderPresets(); });
+
+// before/after: by itself the line follows the pointer and stays where the pointer left it; a click or a drag keeps
+// it where it lands (it used to hand a drag back to following, so a line dragged to an edge and let go outside the
+// picture snapped back to the middle); a double-click lets it follow again; a label shows only that side
+const cut = { pinned: false, down: null, dragged: false, follow: false, only: null };
+const setCut = f => stage.style.setProperty("--cut", `${(Math.min(1, Math.max(0, f)) * 100).toFixed(2)}%`);
+const fracAt = e => { const r = stage.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
+const cutHint = t => { document.getElementById("cutHint").textContent = t; };
+const FOLLOW_HINT = TOUCH ? "Tap or drag to move the line" : "Click or drag to keep the line there";
+cutHint(FOLLOW_HINT);
+function markOnly(side) {
+  cut.only = side;
+  stage.querySelectorAll(".tag").forEach(t => t.classList.toggle("on", t.dataset.side === side));
+}
+function keepAt(f, hint) { cut.pinned = true; markOnly(null); setCut(f); cutHint(hint); }
+function follow(f) { cut.pinned = false; markOnly(null); cutHint(FOLLOW_HINT); setCut(f); }
+const EDGE = 0.2;   // coming in over the outer fifth on either side leaves the line where it is (passing by the picture);
+                    // once the pointer has reached the middle the line follows it everywhere until it leaves the picture
+stage.addEventListener("pointerdown", e => { cut.down = e.clientX; cut.dragged = false; stage.classList.add("dragging"); try { stage.setPointerCapture(e.pointerId); } catch (er) { /* no capture: still works inside the picture */ } });
+stage.addEventListener("pointermove", e => {
+  const f = fracAt(e);
+  if (cut.down !== null) { if (Math.abs(e.clientX - cut.down) > 4) cut.dragged = true; if (cut.dragged) setCut(f); return; }
+  if (cut.pinned) return;
+  if (!cut.follow && f >= EDGE && f <= 1 - EDGE) cut.follow = true;
+  if (cut.follow) setCut(f);
+});
+stage.addEventListener("pointerup", e => {
+  if (cut.down === null) return;
+  cut.down = null; stage.classList.remove("dragging");
+  keepAt(fracAt(e), TOUCH ? FOLLOW_HINT : "Kept · double-click to let it follow again");
+});
+stage.addEventListener("pointercancel", () => { cut.down = null; stage.classList.remove("dragging"); });
+stage.addEventListener("pointerleave", () => { cut.follow = false; });
+stage.addEventListener("dblclick", e => { cut.follow = true; follow(fracAt(e)); });
+for (const t of stage.querySelectorAll(".tag")) {
+  for (const ev of ["pointerdown", "pointerup", "pointermove", "dblclick"]) t.addEventListener(ev, e => e.stopPropagation());
+  t.addEventListener("click", () => {
+    const side = t.dataset.side;
+    if (cut.only === side) { cut.follow = false; follow(0.5); return; }         // again: both sides
+    const again = TOUCH ? "tap" : "click";
+    keepAt(side === "picture" ? 1 : 0, side === "picture" ? `Only the picture · ${again} Picture again to compare`
+                                                           : `Only the pixel art · ${again} Pixel art again to compare`);
+    markOnly(side);
+  });
+}
+
+// opening a picture: button, drop anywhere, paste
+function openFile(f) {
+  if (!f || !f.type.startsWith("image/")) return;
+  const rd = new FileReader();
+  rd.onload = () => { const im = new Image(); im.onload = () => {
+    S.src = im; S.srcBytes = f.size; S.cache = null;
+    syncControls(); renderPresets(); schedule(); }; im.src = rd.result; };
+  rd.readAsDataURL(f);
+}
+document.getElementById("file").addEventListener("change", e => openFile(e.target.files[0]));
+addEventListener("dragover", e => { e.preventDefault(); stage.classList.add("drag"); });
+addEventListener("dragleave", e => { if (!e.relatedTarget) stage.classList.remove("drag"); });
+addEventListener("drop", e => { e.preventDefault(); stage.classList.remove("drag"); openFile(e.dataTransfer.files[0]); });
+addEventListener("paste", e => { const it = [...(e.clipboardData || {}).items || []].find(i => i.type.startsWith("image/")); if (it) openFile(it.getAsFile()); });
+
+// downloads: the native file, and a crisp upscale
+let viewerDownloads = null;
+
+function scaled(scale) {             // the result, each pixel scale x scale (no smoothing)
+  const { canvas, w, h } = S.result;
+  if (scale <= 1) return canvas;
+  const c = document.createElement("canvas"); c.width = w * scale; c.height = h * scale;
+  const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(canvas, 0, 0, c.width, c.height);
+  return c;
+}
+function save(scale) {
+  if (!S.result) return;
+  const { w, h } = S.result, filename = `pixel-pass-${w}x${h}${scale > 1 ? `-x${scale}` : ""}.png`;
+  scaled(scale).toBlob(b => {
+    if (viewerDownloads) { viewerDownloads.save({ filename, data: b }).catch(() => { /* declined or unavailable: nothing to do */ }); return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = filename; document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }, "image/png");
+}
+document.getElementById("dl").addEventListener("click", () => save(1));
+document.getElementById("dlBig").addEventListener("click", () => save(S.scale || 4));
+
+// copying: Ctrl+C (Cmd+C) with no text selected and no text field in use puts the pixel art on the clipboard, scaled up
+// crisp like the PNG xN button (apps blur a small picture when they enlarge it). It listens for the key itself: Chrome
+// fires no copy event while nothing is selected.
+let noteTimer = 0;
+function stageNote(t) {
+  const n = document.getElementById("stageNote");
+  n.textContent = t; n.hidden = false; clearTimeout(noteTimer); noteTimer = setTimeout(() => { n.hidden = true; }, 1800);
+}
+addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "c") return;
+  const a = document.activeElement, sel = getSelection();
+  if (!S.result || (a && a.matches("input[type=text], input:not([type]), textarea, [contenteditable]")) || (sel && String(sel).trim())) return;
+  e.preventDefault();
+  const scale = S.scale || 4;
+  if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === "undefined") { stageNote("This browser cannot copy pictures: use the PNG buttons"); return; }
+  const png = new Promise(res => scaled(scale).toBlob(res, "image/png"));
+  navigator.clipboard.write([new ClipboardItem({ "image/png": png })])
+    .then(() => stageNote(`Copied the pixel art ×${scale}`), () => stageNote("Copying is blocked here: use the PNG buttons"));
+});
+
+// button icons sit on the middle of the lettering, not of the line: a line box is centred on the font's ascent and
+// descent, so letters look low next to a centred icon. Measured once the page's font is in (each system has its own).
+document.fonts.ready.then(() => {
+  const b = document.getElementById("dlBig"), cs = getComputedStyle(b), x = document.createElement("canvas").getContext("2d");
+  x.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const H = x.measureText("H"), xh = x.measureText("x").actualBoundingBoxAscent, size = parseFloat(cs.fontSize);
+  if (!H.fontBoundingBoxAscent || !size) return;
+  const dy = (H.fontBoundingBoxAscent - H.fontBoundingBoxDescent) / 2 - (H.actualBoundingBoxAscent + xh) / 4;
+  docEl.style.setProperty("--icon-dy", `${Math.max(0, Math.min(0.2, dy / size)).toFixed(3)}em`);
+}).catch(() => {});
+
+// full view: only the picture, the sliders in a side panel that opens and closes (under the picture on an upright
+// screen); Full screen starts with the picture alone, Settings (shown on one-column pages, where the sliders are far
+// below the picture) with the sliders open; where the browser allows it the page also goes truly full screen (Esc
+// leaves either way)
+const docEl = document.documentElement, fsPanel = document.getElementById("fsPanel");
+function setFull(on, panel) {
+  docEl.classList.toggle("full", on);
+  if (on) { docEl.classList.toggle("nopanel", !panel); fsPanel.setAttribute("aria-pressed", String(!!panel)); }
+}
+function leaveFull() {
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  setFull(false);
+}
+function enterFull(panel) {
+  setFull(true, panel);
+  try { const p = docEl.requestFullscreen && docEl.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not allowed here: the page fills the window */ }
+}
+document.getElementById("fsBtn").addEventListener("click", () => enterFull(false));
+document.getElementById("setBtn").addEventListener("click", () => enterFull(true));
+document.getElementById("fsExit").addEventListener("click", leaveFull);
+fsPanel.addEventListener("click", () => fsPanel.setAttribute("aria-pressed", String(!docEl.classList.toggle("nopanel"))));
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && docEl.classList.contains("full")) setFull(false); });
+addEventListener("keydown", e => { if (e.key === "Escape" && docEl.classList.contains("full") && !document.fullscreenElement) leaveFull(); });
+
+// the sample: a summer riverside beach
+// the last settings of this browser (restored here: the helpers it needs are defined above by now)
+try { const saved = JSON.parse(localStorage.getItem("pixelpass.opts") || "null"); if (saved) S.opts = full(saved); } catch (e) { /* no storage */ }
+syncControls(); renderPresets();
+const sample = new Image();
+sample.onload = () => { if (!S.src) { S.src = sample; S.srcBytes = Math.round((sample.src.length - sample.src.indexOf(",") - 1) * 3 / 4); schedule(); } };
+sample.src = srcImg.src;            // the sample is the picture already in the page
+</script>
+<script>
+"use strict";
+// The sky behind the page, made the way the tool makes pixel art: a few colours, bands with ordered dither.
+// Night: stars from a hash of their sky pixel (a resize shows more of the same sky); now and then a star flares, the
+// big ones breathe, a shooting star every minute or so. Day, an anime summer sky: thunderheads and small cumulus with
+// cel-shaded lumps drifting a pixel every few seconds, a few cherry petals, now and then a plane drawing a contrail.
+// A step every 125 ms (a timer, not every frame); frames only while a shooting star flies; nothing while hidden.
+// With "reduce motion" on (Windows: animation effects off) stars still flare and clouds still drift, but nothing
+// flies or falls.
+(() => {
+  const root = document.documentElement, host = document.getElementById("skyHost"), cv = document.getElementById("sky"), ctx = cv.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const dither = (x, y) => (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+  const mod = (v, m) => ((v % m) + m) % m;
+  // a colour band: solid inside, ordered dither only across a seam of this share of a band around each boundary
+  const band = (g, x, y, seam) => { const f = Math.floor(g); return f + ((g - f - 0.5) / seam + 0.5 > dither(x, y) ? 1 : 0); };
+  let W = 0, H = 0, P = 0, scene = null, pending = false;
+
+  function hash(x, y, k) {
+    let h = Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1) ^ Math.imul(k, 0x9e3779b1);
+    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  function noise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = hash(xi, yi, 7), b = hash(xi + 1, yi, 7), c = hash(xi, yi + 1, 7), d = hash(xi + 1, yi + 1, 7);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  }
+  const px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); };
+  function toCanvas(img) { const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; c.getContext("2d").putImageData(img, 0, 0); return c; }
+
+  // ---------------------------------------------------------------- night
+  function night() {
+    const SKY = ["#03030a", "#050511", "#090818", "#0e0b1e", "#140e25", "#1b112a"].map(rgb);
+    const TONE = ["#44465a", "#7b7e98", "#bcc3dc", "#f8f5ec"];  // star tones: dim, mid, bright, white
+    const TINT = ["#f8f5ec", "#b1d6f6", "#f3d79e"];             // a flaring star's top tone: white, blue, gold
+    let base = null, stars = [], shot = null, nextShot = performance.now() / 1000 + 10 + 10 * Math.random();
+
+    // the still part: dithered gradient, the milky way as a dithered glow with denser stars, the stars that never move
+    function build() {
+      shot = null;
+      const img = new ImageData(W, H), d = img.data, glow = new Float32Array(W * H);
+      const y0 = 0.93 * H, ax = 0.08 * H - y0, ay = -W, an = Math.hypot(ax, ay);
+      const bw = 0.17 * Math.min(W, H) + 0.04 * Math.max(W, H);
+      for (let y = 0; y < H; y++) {
+        const gy = 3.3 * Math.pow(y / Math.max(1, H - 1), 1.25);
+        for (let x = 0; x < W; x++) {
+          const t = (x * ax + (y - y0) * ay) / an / bw, e = Math.exp(-t * t);
+          const m = e < 0.004 ? 0 : e * (0.3 + 0.7 * (0.65 * noise(x / 24, y / 24) + 0.35 * noise(x / 8 + 50, y / 8)));
+          glow[y * W + x] = m;
+          const c = SKY[Math.min(SKY.length - 1, Math.floor(gy + 2 * m + dither(x, y)))];
+          const i = (y * W + x) * 4;
+          d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+        }
+      }
+      const T = TONE.map(rgb);
+      const put = (x, y, c) => {
+        if (x < 0 || y < 0 || x >= W || y >= H) return;
+        const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+      };
+      const BIG = 1 / 24000, BRIGHT = BIG + 1 / 4000, MID = BRIGHT + 1 / 800;
+      stars = [];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const r = hash(x, y, 1);
+        if (r >= MID + (0.4 + 2 * glow[y * W + x]) / 200) continue;
+        const tw = hash(x, y, 3), tc = hash(x, y, 2), star = { x, y, kind: 0, tint: tc < 0.2 ? 1 : tc < 0.32 ? 2 : 0, phase: tw * 7.3 % 1, period: 0 };
+        if (r < BIG) { star.kind = 3; star.period = 6 + 5 * hash(x, y, 4); }
+        else if (r < BRIGHT && tw < 0.5) { star.kind = 2; star.period = 9 + 9 * hash(x, y, 4); }
+        else if (r < BRIGHT) { put(x, y, T[2]); put(x - 1, y, T[0]); put(x + 1, y, T[0]); put(x, y - 1, T[0]); put(x, y + 1, T[0]); }
+        else if (r < MID && tw < 0.16) { star.kind = 1; star.period = 7 + 8 * hash(x, y, 4); }
+        else put(x, y, r < MID ? T[tw < 0.6 ? 1 : 2] : T[0]);
+        if (star.kind) stars.push(star);
+      }
+      base = toCanvas(img);
+    }
+    const arms = (s, r, c) => { px(s.x - r, s.y, c); px(s.x + r, s.y, c); px(s.x, s.y - r, c); px(s.x, s.y + r, c); };
+    function level(s, t) {           // 0 at rest .. 1 at its brightest
+      if (s.kind === 3) return 0.5 + 0.5 * Math.sin(6.2832 * (t / s.period + s.phase));
+      const u = (t / s.period + s.phase) % 1, D = 1.2 / s.period;
+      return u < D ? Math.sin(Math.PI * u / D) : 0;
+    }
+    function drawStar(s, t) {
+      const k = Math.round(2 * level(s, t)), top = TINT[s.tint];
+      if (s.kind === 1) px(s.x, s.y, k === 2 ? top : TONE[1 + k]);
+      else if (s.kind === 2) { px(s.x, s.y, k ? top : TONE[2]); arms(s, 1, TONE[k]); if (k === 2) arms(s, 2, TONE[0]); }
+      else { px(s.x, s.y, top); arms(s, 1, TONE[2]); if (k) arms(s, 2, TONE[k - 1]); if (k === 2) arms(s, 3, TONE[0]); }
+    }
+    function drawShot(t) {           // a 2:1 pixel line, head white, the tail fading through the star tones
+      const p = (t - shot.t0) / shot.dur;
+      if (p >= 1) { shot = null; nextShot = t + 35 + 45 * Math.random(); return; }
+      const head = Math.round(shot.len * (1 - (1 - p) * (1 - p))), fade = p < 0.65 ? 0 : (p - 0.65) / 0.35;
+      const tail = Math.round(12 * (1 - 0.6 * fade)), dim = Math.floor(3 * fade);
+      for (let i = 0; i <= tail && i <= head; i++) {
+        const tone = (i === 0 ? 3 : i < 3 ? 2 : i < 7 ? 1 : 0) - dim, s = head - i;
+        if (tone >= 0) px(shot.x + shot.dir * s, shot.y + (s >> 1), TONE[tone]);
+      }
+    }
+    return {
+      build,
+      fast: () => !!shot,
+      draw(t) {
+        if (!shot && t >= nextShot && !still.matches) shot = {
+          x: Math.round(W * (0.2 + 0.6 * Math.random())), y: Math.round(H * (0.05 + 0.3 * Math.random())),
+          dir: Math.random() < 0.5 ? -1 : 1, t0: t, dur: 0.9 + 0.4 * Math.random(), len: Math.min(W, H) * (0.18 + 0.12 * Math.random()),
+        };
+        ctx.drawImage(base, 0, 0);
+        for (const s of stars) drawStar(s, t);
+        if (shot) drawShot(t);
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------- day
+  function day() {
+    const SKY = ["#285cc2", "#2f67c8", "#3571cd", "#3c7ad2", "#4383d5", "#4b8cd9", "#5394dc", "#5c9ce0", "#65a4e3", "#6eace5",
+      "#77b3e8", "#81bbeb", "#8bc2ed", "#95c9f0", "#9fd0f2", "#aad6f5", "#b4ddf7", "#bfe3fa", "#caeafc", "#d5f0ff"].map(rgb);
+    const NEAR = ["#949bca", "#b1bce2", "#cbd8ef", "#e7f0f8", "#fefdfa"];   // cloud tones, shadow to sunlit
+    const FAR = ["#b3c5e5", "#c4d6ef", "#d9e6f5", "#ebf3fa", "#fcfcf9"];    // thin far clouds: less contrast
+    const PETAL = ["#e68aaf", "#f6b5cd", "#fcdfe9"];                        // dark, mid, light
+    const TUMBLE = [                                                        // a petal turning over: [dx, dy, tone]
+      [[0, 0, 2], [1, 0, 1], [1, 1, 1], [2, 1, 0]], [[0, 0, 1], [1, 1, 0]],
+      [[1, 0, 2], [2, 0, 1], [0, 1, 0], [1, 1, 2]], [[1, 0, 1], [0, 1, 0]],
+    ];
+    const LX = 0.45, LY = -0.7, LZ = 0.55;                                  // the light: upper right, in front
+    let base = null, clouds = [], petals = [], plane = null, nextPlane = performance.now() / 1000 + 20 + 15 * Math.random();
+
+    // a cloud as a heap of spheres, shaded in hard bands (cel style) with a little dither on the band edges; each
+    // sphere's own roundness is mixed with the whole cloud's, so light and shade fall in broad areas, not ball by ball
+    function cloud(seed, size, kind, tones, wide = 2.6) {
+      const r = k => hash(seed, k, 11), puffs = [];
+      let gx, gy, ga, gb, mix;
+      if (kind === "tower") {   // a summer thunderhead: a billowing column under a cauliflower crown, its foot below the screen
+        const cw = size * 0.9;
+        for (let i = 0; i < 11; i++) {
+          const f = i / 10, rad = cw * (0.2 + 0.06 * r(i)), half = cw * (0.3 + 0.06 * f);
+          puffs.push([(r(i + 40) - 0.5) * 2 * (half - rad * 0.6), size - rad * 0.8 - f * (size - rad * 2.2), rad]);
+        }
+        for (let j = 0; j < 7; j++) {
+          const rad = cw * (0.12 + 0.05 * r(j + 60)), x = (j / 6 - 0.5) * cw * 0.75;
+          puffs.push([x, rad * 1.1 + r(j + 70) * cw * 0.08 + Math.abs(x) * 0.3, rad]);
+        }
+        const body = puffs.length;
+        for (let j = 0; j < 34; j++) {          // small billows on the upper and side edges
+          const p = puffs[Math.floor(r(j + 100) * body)], a = -Math.PI * (r(j + 150) * 1.3 - 0.15);
+          puffs.push([p[0] + Math.cos(a) * p[2] * 0.85, p[1] + Math.sin(a) * p[2] * 0.85, p[2] * (0.25 + 0.15 * r(j + 200))]);
+        }
+        gx = 0; gy = size * 0.5; ga = cw * 0.6; gb = size * 0.6; mix = 0.55;
+      } else {                  // a fair-weather cumulus: humps on a flat base (wide: a bank along the horizon)
+        const n = Math.max(4, Math.round(wide * 1.5 + r(0) * 3));
+        for (let i = 0; i < n; i++) {
+          const f = (i + 0.5) / n, hump = wide > 4 ? 0.6 + 0.4 * r(i + 50) : Math.sin(Math.PI * f);
+          const rad = size * (0.25 + 0.32 * hump) * (0.8 + 0.4 * r(i + 1));
+          puffs.push([size * wide * f + (r(i + 20) - 0.5) * size * 0.25, -rad * (0.35 + 0.35 * r(i + 30)), rad]);
+        }
+        gx = size * wide / 2; gy = -size * 0.3; ga = size * wide * 0.6; gb = size * 0.6; mix = 0.3;
+      }
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const [x, y, q] of puffs) { x0 = Math.min(x0, x - q); x1 = Math.max(x1, x + q); y0 = Math.min(y0, y - q); y1 = Math.max(y1, y + q); }
+      if (kind !== "tower") y1 = 0;
+      x0 = Math.floor(x0); y0 = Math.floor(y0);
+      const w = Math.max(1, Math.ceil(x1) - x0), h = Math.max(1, Math.ceil(y1) - y0), img = new ImageData(w, h), d = img.data, T = tones.map(rgb);
+      for (let cy = 0; cy < h; cy++) for (let cx = 0; cx < w; cx++) {
+        const X = x0 + cx + 0.5, Y = y0 + cy + 0.5;
+        let bz = 0, bp = null;
+        for (const p of puffs) { const dx = X - p[0], dy = Y - p[1], q = p[2] * p[2] - dx * dx - dy * dy; if (q > bz * bz) { bz = Math.sqrt(q); bp = p; } }
+        if (!bp) continue;
+        const ux = Math.max(-1, Math.min(1, (X - gx) / ga)), uy = Math.max(-1, Math.min(1, (Y - gy) / gb)), uz = Math.sqrt(Math.max(0, 1 - ux * ux - uy * uy));
+        const nx = (1 - mix) * (X - bp[0]) / bp[2] + mix * ux, ny = (1 - mix) * (Y - bp[1]) / bp[2] + mix * uy, nz = (1 - mix) * bz / bp[2] + mix * uz;
+        const low = (Y - y0) / h;   // 0 top .. 1 bottom
+        let b = 0.62 + 0.55 * (nx * LX + ny * LY + nz * LZ) / (Math.hypot(nx, ny, nz) || 1);
+        b -= kind === "tower" ? 0.3 * Math.max(0, (low - 0.55) / 0.45) : 0.45 * Math.max(0, (low - 0.6) / 0.4) ** 1.5;
+        b += (dither(cx, cy) - 0.5) * 0.08;
+        const c = T[b > 0.9 ? 4 : b > 0.72 ? 3 : b > 0.52 ? 2 : b > 0.34 ? 1 : 0], i = (cy * w + cx) * 4;
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      }
+      return toCanvas(img);
+    }
+    function build() {
+      plane = null;
+      const img = new ImageData(W, H), d = img.data;
+      const n = SKY.length - 1, ca = Math.cos(0.12), sa = Math.sin(0.12);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        // cirrus: long thin streaks, a little slanted, in patches, only in the upper sky
+        const u = x * ca + y * sa, v = y * ca - x * sa, i = (y * W + x) * 4;
+        const wisp = Math.max(0, noise(u / 90 + 31, v / 5) - 0.58) / 0.42 * Math.max(0, noise(u / 230 + 7, v / 45 + 3) - 0.36) / 0.64 * Math.max(0, 1 - y / (0.65 * H));
+        const c = SKY[Math.min(n, band(n * Math.pow(y / Math.max(1, H - 1), 0.9) + 6 * wisp, x, y, 0.7))];
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      }
+      base = toCanvas(img);
+      clouds = [];
+      const add = (c, x, y, v) => clouds.push({ img: c, w: c.width, x0: x + c.width + 20, y, v });
+      // the big thunderhead on the left, a fainter distant one on the right, a low bank along the horizon in front
+      if (W >= 300) { const c = cloud(101, H * 0.42, "tower", FAR); add(c, 0.68 * W, Math.round(H - c.height * 0.8), 0.03); }
+      { const c = cloud(100, Math.min(H * 0.66, W * 0.85), "tower", NEAR); add(c, 0.02 * W - 0.15 * c.width, Math.round(H - c.height * 0.85), 0.04); }
+      { const sz = H * 0.07, c = cloud(150, sz, "cumulus", FAR, W * 1.15 / sz); add(c, -0.08 * W, H - c.height + Math.round(sz * 0.25), 0); }
+      const nf = Math.round(W / 170) + 1, nm = Math.round(W / 260) + 1;
+      for (let i = 0; i < nf; i++) {
+        const c = cloud(200 + i, H * (0.025 + 0.02 * hash(i, 4, 21)), "cumulus", FAR);
+        add(c, (i + 0.2 + 0.6 * hash(i, 5, 21)) / nf * (W + 80) - 40, Math.round(H * (0.06 + 0.32 * hash(i, 6, 21))), 0.16);
+      }
+      for (let i = 0; i < nm; i++) {
+        const c = cloud(300 + i, H * (0.06 + 0.05 * hash(i, 7, 21)), "cumulus", NEAR);
+        add(c, (i + 0.2 + 0.6 * hash(i, 8, 21)) / nm * (W + 160) - 80, Math.round(H * (0.3 + 0.4 * hash(i, 9, 21)) - c.height), 0.32);
+      }
+      petals = [];
+      const np = Math.max(3, Math.min(9, Math.round(W * H / 28000)));
+      for (let i = 0; i < np; i++) petals.push({
+        x: hash(i, 1, 31) * W, y: hash(i, 2, 31) * H, vx: 7 + 6 * hash(i, 3, 31), vy: 4 + 4 * hash(i, 4, 31),
+        sway: 2 + 3 * hash(i, 5, 31), ph: hash(i, 6, 31) * 6.28, spin: 0.7 + 0.6 * hash(i, 7, 31),
+      });
+    }
+    function drawPlane(t) {          // a tiny plane far up, its contrail fading and spreading behind it
+      const run = (t - plane.t0) * plane.v, span = W + 40, fade = 28;
+      if (run - plane.v * fade > span) { plane = null; nextPlane = t + 60 + 80 * Math.random(); return; }
+      for (let s = Math.max(0, Math.ceil(run - plane.v * fade)); s <= Math.min(run, span); s++) {
+        const age = (run - s) / plane.v, x = plane.dir > 0 ? s - 20 : W + 20 - s, y = Math.round(plane.y + s * plane.slope);
+        ctx.globalAlpha = age < 3 ? 0.95 : age < 10 ? 0.7 : age < 18 ? 0.45 : 0.22;
+        px(x, y, "#ffffff");
+        if (age > 6) { ctx.globalAlpha *= 0.45; px(x, y + 1, "#ffffff"); }
+      }
+      ctx.globalAlpha = 1;
+      if (run <= span) px(plane.dir > 0 ? Math.floor(run) - 20 : W + 20 - Math.floor(run), Math.round(plane.y + Math.floor(run) * plane.slope), "#fffef6");
+    }
+    return {
+      build,
+      fast: () => false,
+      draw(t) {
+        if (!plane && t >= nextPlane && !still.matches) plane = {
+          t0: t, y: H * (0.06 + 0.2 * Math.random()), dir: Math.random() < 0.5 ? 1 : -1, slope: (Math.random() - 0.5) * 0.16, v: 9 + 4 * Math.random(),
+        };
+        ctx.drawImage(base, 0, 0);
+        if (plane) drawPlane(t);
+        for (const c of clouds) ctx.drawImage(c.img, Math.round(mod(c.x0 + c.v * t, W + c.w + 40)) - c.w - 20, c.y);
+        if (still.matches) return;
+        for (const p of petals) {
+          const x = Math.round(mod(p.x + p.vx * t + p.sway * Math.sin(t * 0.9 + p.ph), W + 12)) - 6;
+          const y = Math.round(mod(p.y + p.vy * t, H + 12)) - 6;
+          for (const [dx, dy, k] of TUMBLE[Math.floor(t * p.spin * 4 + p.ph) & 3]) px(x + dx, y + dy, PETAL[k]);
+        }
+      },
+    };
+  }
+
+  // ---------------------------------------------------------------- plumbing
+  function tick() {
+    pending = false;
+    if (!scene || !W || document.hidden) return;     // picks up again when the tab is shown (or gets a size)
+    scene.draw(performance.now() / 1000);
+    pending = true;
+    if (scene.fast()) requestAnimationFrame(tick); else setTimeout(tick, 125);
+  }
+  const kick = () => { if (!pending) tick(); };
+  function size() {
+    const dpr = window.devicePixelRatio || 1, p = Math.max(2, Math.round(3 * dpr));   // a sky pixel: about 3 CSS px, whole device pixels
+    const w = Math.ceil(host.clientWidth * dpr / p), h = Math.ceil(host.clientHeight * dpr / p);
+    if (!w || !h || (w === W && h === H && p === P)) return;
+    W = w; H = h; P = p; cv.width = W; cv.height = H;
+    cv.style.width = W * P / dpr + "px"; cv.style.height = H * P / dpr + "px";
+    scene.build(); scene.draw(performance.now() / 1000);
+  }
+  function setScene() { scene = root.dataset.sky === "day" ? day() : night(); W = 0; size(); kick(); }
+  let rt = 0;
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { size(); kick(); }, 150); });
+  document.addEventListener("visibilitychange", kick);
+  new MutationObserver(setScene).observe(root, { attributes: true, attributeFilter: ["data-sky"] });
+  setScene();
+})();
+</script>
