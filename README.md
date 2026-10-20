@@ -29,6 +29,8 @@ Your picture is never uploaded, the page makes no network requests and uses no c
 - Pixel size 1–16, palette from the picture or a classic one (PICO-8, Game Boy, C64, …)
 - Dither only on smooth areas, edges stay clean
 - Before/after slider, presets, PNG export with transparency
+- Animated GIFs in and out, one palette for all frames
+- Pixel editor to touch up the result: pencil, eraser, fill, color wheel
 - One HTML file, no dependencies, works offline
 
 ## How it works
@@ -47,7 +49,7 @@ python build.py
 ## Credits
 
 - Palettes: DawnBringer 32 by DawnBringer, Endesga 32 by ENDESGA, Sweetie 16 by GrafxKid, PICO-8 by Lexaloffle,
-  Commodore 64 colours after Philip "Pepto" Timmermann, Game Boy's original four greens.
+  Commodore 64 colors after Philip "Pepto" Timmermann, Game Boy's original four greens.
 - Sample picture: part of the demo only. It is not covered by the GPL and may not be used on its own;
   replace `src/sample.webp` with your own picture if you build on this project.
 - Icon and screenshots in `docs/`: not covered by the GPL either (the screenshots show the sample picture).
