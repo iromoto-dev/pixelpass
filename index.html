@@ -10,6 +10,7 @@
 :root {
   color-scheme: light;
   --hue: 355;
+  --ratio: 1.7910;   /* the picture's shape (width / height): the sample's until the page sets it */
   --font-sans: 'Manrope', 'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-pixel: 'Pixelify Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
@@ -97,11 +98,20 @@ h1 span { color: var(--sky-accent); }
 .lead { margin: 0; max-width: 46ch; color: var(--sky-fg-2); text-wrap: pretty; }
 .tool { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
 @media (max-width: 900px) { .tool { grid-template-columns: minmax(0, 1fr); } }
+/* a computer: the picture as tall as the window allows with the buttons under it still in sight (--chrome: the
+   header, the card and the row under the picture), the page as wide as that needs (never less than 62vh, as before) */
+@media (min-width: 901px) {
+  :root:not(.app) { --chrome: 262px; --stage-h: max(62vh, calc(100vh - var(--chrome)));
+    --card-w: max(760px, calc(var(--stage-h) * var(--ratio, 2) + 22px)); }
+  :root:not(.app) .wrap { max-width: calc(var(--card-w) + 340px + 2 * clamp(16px, 4vw, 40px)); }
+  :root:not(.app) .tool { grid-template-columns: minmax(0, var(--card-w)) 320px; justify-content: center; }
+  :root:not(.app) .stage { max-width: min(100%, calc(var(--stage-h) * var(--ratio, 2))); }
+}
 
 /* stage: the picture left of the line, its pixel art right of it */
 .stage-card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-m); padding: 10px; min-width: 0; }
 .stage { position: relative; overflow: hidden; border-radius: var(--radius-s);
-  background: repeating-conic-gradient(var(--checker) 0 25%, var(--stage) 0 50%) 0 0 / 16px 16px;  /* shows where a picture is transparent */ cursor: ew-resize; touch-action: pan-y; /* a finger moving up or down still scrolls the page */ --cut: 50%; max-width: min(100%, calc(62vh * var(--ratio, 2))); }
+  background: repeating-conic-gradient(var(--checker) 0 25%, var(--stage) 0 50%) 0 0 / 16px 16px;  /* shows where a picture is transparent */ cursor: default; touch-action: pan-y; /* a finger moving up or down still scrolls the page */ --cut: 50%; max-width: min(100%, calc(62vh * var(--ratio, 2))); }
 .stage img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
 /* the pixel art is drawn by the page into a canvas with one canvas pixel per screen pixel, so the browser never
    resamples it (at a size that is not a whole multiple, every repaint could pick other pixels: flashing). It lies
@@ -119,9 +129,16 @@ h1 span { color: var(--sky-accent); }
 .stage.anim #srcAnim { display: block; }
 .stage.anim #srcImg { visibility: hidden; }
 .stage.anim.empty #srcAnim { clip-path: none; }
-.stage.empty .bar { display: none; }
+.stage.empty .bar, .stage.one .bar { display: none; }
 .stage.dragging { transition: none; }
-.stage .bar { position: absolute; top: 0; bottom: 0; left: var(--cut); width: 2px; margin-left: -1px; background: oklch(100% 0 0 / 0.75); box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.35); pointer-events: none; }
+/* the mouse pointer: the double arrow only where moving it moves the line, a hand over a zoomed picture */
+.stage[data-cursor="line"], .stage.dragging { cursor: ew-resize; }
+.stage[data-cursor="pan"] { cursor: grab; }
+.stage.panning { cursor: grabbing; }
+/* the line: across the picture. With the viewer the picture can be smaller than its area (a tall one in full screen):
+   the viewer hands over where the visible picture is (--vl, --vt, --vb in % of the area, --vwk its width as a share)
+   and the line stays on it; without the viewer these are 0 and 1 and the line spans the area as before */
+.stage .bar { position: absolute; top: var(--vt, 0%); bottom: var(--vb, 0%); left: calc(var(--vl, 0%) + var(--cut) * var(--vwk, 1)); width: 2px; margin-left: -1px; background: oklch(100% 0 0 / 0.75); box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.35); pointer-events: none; }
 .stage .tag { position: absolute; top: 8px; font: 600 11px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: oklch(96% 0 0); background: oklch(0% 0 0 / 0.55); padding: 5px 8px; border-radius: 6px; border: 0; cursor: pointer; }
 .stage .tag.l { left: 8px; } .stage .tag.r { right: 8px; }
 .stage .tag:hover { background: oklch(0% 0 0 / 0.75); }
@@ -131,11 +148,12 @@ h1 span { color: var(--sky-accent); }
 .under { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 4px 4px; }
 .stage { margin-inline: auto; }
 @media (min-width: 901px) { .stage-card { position: sticky; top: 16px; } }
-.presets { display: grid; gap: 8px; margin-top: 12px; padding: 12px 4px 2px; border-top: 1px solid var(--line); }
-.presets .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+/* the presets: first in the settings, a line under them (they set all the rest) */
+.presets { display: grid; gap: 8px; }
+.panel .presets { padding-bottom: 8px; border-bottom: 1px solid var(--line); }   /* + the message row's gap: 16 */
+.presets .prow { display: grid; gap: 8px; }
 .presets .prow > .lab { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-3); }
-.presets select { width: auto; flex: 1 1 180px; max-width: 280px; }
-.presets .inline { flex: 1 1 260px; }
+.presets .msg:empty { min-height: 0; }    /* no room for a message until there is one */
 .stats { font: 13px var(--font-mono); color: var(--fg-2); font-variant-numeric: tabular-nums; }
 .swatches { display: flex; flex-wrap: wrap; gap: 3px; flex: 1 1 260px; min-width: 0; }
 .swatches i { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.15); }
@@ -227,6 +245,7 @@ textarea { width: 100%; resize: vertical; font: 12px/1.4 var(--font-mono); }
 button.btn.small { padding: 7px 12px; font-size: 13px; }
 button.btn.icon { padding: 9px; }
 .share { display: grid; gap: 8px; }
+.share:not([open]) { gap: 0; }   /* closed, its hidden part would still take a gap */
 .share summary { cursor: pointer; font-size: 13px; color: var(--fg-2); }
 .share[open] summary { margin-bottom: 6px; }
 .linkbtn { justify-self: start; background: none; border: 0; padding: 0; color: var(--fg-2); font: 600 13px var(--font-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
@@ -344,6 +363,27 @@ button.btn.icon { padding: 9px; }
   .ed-size .btn { width: 30px; height: 30px; }
   .ed-side .hint { display: none; }
 }
+
+/* ---- the viewer (the website's full view, its page on a phone; an app built on this page): the picture area drawn by
+   the page itself, zoomed and moved by fingers or the wheel (see "the viewer" in the script) */
+.stage.viewer #srcImg, .stage.viewer #srcAnim { display: none; }
+.stage:not(.viewer) .srcclip, .stage:not(.viewer) .gest { display: none; }
+/* the website's full view with the viewer: the whole area, the picture fitted in it, zoomed by fingers or the wheel */
+:root.full .stage.viewer { width: 100%; max-width: none; height: calc(100vh - 72px); height: calc(100dvh - 72px); background: var(--stage); touch-action: none; }
+/* the website on a phone: the viewer on the page too, so a pinch zooms the picture, not the page; the area keeps the
+   picture's shape; zoomed in, one finger moves the picture (at its normal size it scrolls the page, as before) */
+:root:not(.app):not(.full) .stage.viewer { aspect-ratio: var(--ratio, 2); }
+.stage.viewer.zoomed { touch-action: none; }
+@media (orientation: portrait) { :root.full:not(.nopanel) .stage.viewer { height: 48vh; height: 48dvh; } }
+.srcclip { position: absolute; inset: 0; z-index: 1; overflow: hidden; clip-path: inset(0 calc(100% - var(--vl, 0%) - var(--cut) * var(--vwk, 1)) 0 0); pointer-events: none; }
+.stage.empty .srcclip { clip-path: none; }
+#srcView { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* while fingers move: the whole picture and pixel art as layers that only move and scale (nothing drawn per frame) */
+.stage .gest { position: absolute; left: 0; top: 0; transform-origin: 0 0; opacity: 0; pointer-events: none; }   /* ready on the graphics side, unseen */
+.stage .gest.art { z-index: 0; image-rendering: pixelated; }
+.stage.gesturing .gest { opacity: 1; }
+.stage.gesturing #srcView, .stage.gesturing #pxView { visibility: hidden; }
+/*APP-STYLE*/
 </style>
 </head>
 <body>
@@ -369,6 +409,7 @@ button.btn.icon { padding: 9px; }
   document.addEventListener("DOMContentLoaded", apply);   // the switch's label, once the button exists
   setInterval(apply, 60000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) apply(); });
+  document.addEventListener("pp-sky", e => { held = e.detail === "day" || e.detail === "night" ? e.detail : null; keep(); apply(); });   // a page or an app built on it can set the sky
   document.addEventListener("click", e => {
     const t = e.target instanceof Element ? e.target : null;
     if (t && t.closest("#skyBtn")) held = root.dataset.sky === "night" ? "day" : "night";
@@ -415,6 +456,13 @@ button.btn.icon { padding: 9px; }
           <button class="btn primary" id="dl" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5M3 13h10"/></svg><span id="dlLabel">PNG</span></button>
         </div>
       </div>
+      <div class="fsbar">
+        <button type="button" class="btn small" id="fsPanel" aria-pressed="false" title="Show or hide the settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
+        <button type="button" class="btn small" id="fsExit" title="Exit full screen (Esc or F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3H3M13 6h-3V3M10 13v-3h3M3 10h3v3"/></svg>Exit</button>
+      </div>
+    </div>
+
+    <form class="panel" id="panel" autocomplete="off">
       <div class="presets">
         <div class="prow">
           <label class="lab" for="preset">Preset</label>
@@ -438,13 +486,6 @@ button.btn.icon { padding: 9px; }
         </details>
         <p class="hint msg" id="presetMsg" aria-live="polite"></p>
       </div>
-      <div class="fsbar">
-        <button type="button" class="btn small" id="fsPanel" aria-pressed="false" title="Show or hide the settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10M6 2.5v3M10 6.5v3M5 10.5v3"/></svg>Settings</button>
-        <button type="button" class="btn small" id="fsExit" title="Exit full screen (Esc or F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3H3M13 6h-3V3M10 13v-3h3M3 10h3v3"/></svg>Exit</button>
-      </div>
-    </div>
-
-    <form class="panel" id="panel" autocomplete="off">
       <div class="group">
         <label class="lab" for="palette">Palette</label>
         <select id="palette">
@@ -691,21 +732,34 @@ function kmeans(x, N, k, even, lw, alpha) {
   const cent = new Float32Array(k * 3), d2 = new Float32Array(S);
   const first = Math.floor(rnd() * S);
   for (let c = 0; c < 3; c++) cent[c] = sub[first * 3 + c];
-  for (let i = 0; i < S; i++) d2[i] = (sub[i * 3] - cent[0]) ** 2 + (sub[i * 3 + 1] - cent[1]) ** 2 + (sub[i * 3 + 2] - cent[2]) ** 2;
+  const sq3 = (i, j) => { const e0 = sub[i * 3] - cent[j * 3], e1 = sub[i * 3 + 1] - cent[j * 3 + 1], e2 = sub[i * 3 + 2] - cent[j * 3 + 2]; return e0 * e0 + e1 * e1 + e2 * e2; };
+  for (let i = 0; i < S; i++) d2[i] = sq3(i, 0);
   for (let j = 1; j < k; j++) {
     let tot = 0; for (let i = 0; i < S; i++) tot += d2[i];
     let r = rnd() * tot, ch = S - 1;
     if (tot > 0) { for (let i = 0; i < S; i++) { r -= d2[i]; if (r <= 0) { ch = i; break; } } } else ch = Math.floor(rnd() * S);
     for (let c = 0; c < 3; c++) cent[j * 3 + c] = sub[ch * 3 + c];
-    for (let i = 0; i < S; i++) d2[i] = Math.min(d2[i], (sub[i * 3] - cent[j * 3]) ** 2 + (sub[i * 3 + 1] - cent[j * 3 + 1]) ** 2 + (sub[i * 3 + 2] - cent[j * 3 + 2]) ** 2);
+    for (let i = 0; i < S; i++) d2[i] = Math.min(d2[i], sq3(i, j));
   }
+  // rounds until no sample changes its centre (the rounds after that would give the same centres), at most 16; a
+  // centre already further than the nearest one after two of the three terms is passed over (the third only adds)
   const lab = new Int32Array(S), acc = new Float64Array(k * 3), cnt = new Int32Array(k);
   for (let it = 0; it < 16; it++) {
+    let moved = false;
     for (let i = 0; i < S; i++) {
+      const s0 = sub[i * 3], s1 = sub[i * 3 + 1], s2 = sub[i * 3 + 2];
       let best = 0, bd = Infinity;
-      for (let j = 0; j < k; j++) { const d = (sub[i * 3] - cent[j * 3]) ** 2 + (sub[i * 3 + 1] - cent[j * 3 + 1]) ** 2 + (sub[i * 3 + 2] - cent[j * 3 + 2]) ** 2; if (d < bd) { bd = d; best = j; } }
-      lab[i] = best;
+      for (let j = 0; j < k; j++) {
+        const e0 = s0 - cent[j * 3], e1 = s1 - cent[j * 3 + 1];
+        let d = e0 * e0 + e1 * e1;
+        if (d >= bd) continue;
+        const e2 = s2 - cent[j * 3 + 2];
+        d += e2 * e2;
+        if (d < bd) { bd = d; best = j; }
+      }
+      if (lab[i] !== best) { lab[i] = best; moved = true; }
     }
+    if (it && !moved) break;
     acc.fill(0); cnt.fill(0);
     for (let i = 0; i < S; i++) { const j = lab[i]; cnt[j]++; acc[j * 3] += sub[i * 3]; acc[j * 3 + 1] += sub[i * 3 + 1]; acc[j * 3 + 2] += sub[i * 3 + 2]; }
     for (let j = 0; j < k; j++) if (cnt[j]) for (let c = 0; c < 3; c++) cent[j * 3 + c] = acc[j * 3 + c] / cnt[j];
@@ -717,34 +771,45 @@ function kmeans(x, N, k, even, lw, alpha) {
 // 3. specks: clusters of at most 2 pixels (connected by edges or corners) take their surroundings' most common color,
 //    unless they stand out by more than `keep` in lightness
 function cleanSpecks(idx, w, h, light, keep) {
-  const seen = new Uint8Array(w * h), out = idx.slice(), comp = [], stack = [];
-  for (let start = 0; start < w * h; start++) {
+  // (typed arrays instead of a list, a map and a set per cluster: a dithered picture has a great many tiny clusters)
+  const N = w * h, seen = new Uint8Array(N), out = idx.slice(), stack = new Int32Array(N), comp = [0, 0];
+  const nv = new Int32Array(16), nc = new Int32Array(16);         // the colors around a speck and how often (16 at most)
+  for (let start = 0; start < N; start++) {
     if (seen[start]) continue;
-    const c = idx[start]; comp.length = 0; stack.length = 0; stack.push(start); seen[start] = 1; let big = false;
-    while (stack.length) {
-      const p = stack.pop(); comp.push(p); if (comp.length > SPECK) big = true;
+    const c = idx[start]; let sp = 0, len = 0;
+    stack[sp++] = start; seen[start] = 1;
+    while (sp) {
+      const p = stack[--sp];
+      if (len < SPECK) comp[len] = p;
+      len++;
       const y = (p / w) | 0, x = p - y * w;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dy && !dx) continue;
         const yy = y + dy, xx = x + dx;
         if (yy < 0 || yy >= h || xx < 0 || xx >= w) continue;
         const q = yy * w + xx;
-        if (!seen[q] && idx[q] === c) { seen[q] = 1; stack.push(q); }
+        if (!seen[q] && idx[q] === c) { seen[q] = 1; stack[sp++] = q; }
       }
     }
-    if (big || c < 0) continue;            // transparent pixels (-1) stay as they are
-    const count = new Map(), mine = new Set(comp);
-    for (const p of comp) {
-      const y = (p / w) | 0, x = p - y * w;
+    if (len > SPECK || c < 0) continue;      // transparent pixels (-1) stay as they are
+    let m = 0;
+    for (let k = 0; k < len; k++) {
+      const p = comp[k], y = (p / w) | 0, x = p - y * w;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const yy = y + dy, xx = x + dx;
-        if ((dy || dx) && yy >= 0 && yy < h && xx >= 0 && xx < w && !mine.has(yy * w + xx)) { const v = idx[yy * w + xx]; if (v >= 0) count.set(v, (count.get(v) || 0) + 1); }
+        const yy = y + dy, xx = x + dx, q = yy * w + xx;
+        if (!(dy || dx) || yy < 0 || yy >= h || xx < 0 || xx >= w || q === comp[0] || (len > 1 && q === comp[1])) continue;
+        const v = idx[q];
+        if (v < 0) continue;
+        let f = 0;
+        while (f < m && nv[f] !== v) f++;
+        if (f === m) { nv[m] = v; nc[m] = 0; m++; }
+        nc[f]++;
       }
     }
-    if (!count.size) continue;
+    if (!m) continue;
     let rep = -1, rc = -1;
-    for (const [v, n] of count) if (n > rc || (n === rc && v < rep)) { rep = v; rc = n; }
-    if (Math.abs(light[c] - light[rep]) <= keep) for (const p of comp) out[p] = rep;
+    for (let f = 0; f < m; f++) if (nc[f] > rc || (nc[f] === rc && nv[f] < rep)) { rep = nv[f]; rc = nc[f]; }
+    if (Math.abs(light[c] - light[rep]) <= keep) for (let k = 0; k < len; k++) out[comp[k]] = rep;
   }
   return out;
 }
@@ -762,9 +827,18 @@ function boostDetail(lab, w, h, amount) {
   for (let i = 0; i < w * h; i++) lab[i * 3] = L[i] + amount * (L[i] - bl[i]);
 }
 // once per picture and grid size: the picture at 4x the grid in OKLab, reduced to the grid (the large buffers are dropped)
+// (OKLab through a cache of 262144 colors, kept across pictures and pixel sizes: a picture repeats its colors, so most
+// sub-pixels are found there; the same numbers come out, with far fewer cube roots. 4 MB, made on first use)
+let labCache = null;
 function prepare(rgba, w, h) {
-  const big = new Float32Array(w * h * BLOCK * BLOCK * 3);
-  for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) toLab(rgba[i], rgba[i + 1], rgba[i + 2], big, j);
+  if (!labCache) labCache = { keys: new Int32Array(1 << 18).fill(-1), vals: new Float32Array(3 << 18) };
+  const big = new Float32Array(w * h * BLOCK * BLOCK * 3), { keys, vals } = labCache;
+  for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) {
+    const key = rgba[i] << 16 | rgba[i + 1] << 8 | rgba[i + 2], s = Math.imul(key, -1640531535) >>> 14, v = s * 3;
+    if (keys[s] === key) { big[j] = vals[v]; big[j + 1] = vals[v + 1]; big[j + 2] = vals[v + 2]; continue; }
+    toLab(rgba[i], rgba[i + 1], rgba[i + 2], big, j);
+    keys[s] = key; vals[v] = big[j]; vals[v + 1] = big[j + 1]; vals[v + 2] = big[j + 2];
+  }
   let al = null;
   for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) { al = new Uint8Array(rgba.length / 4); break; }
   if (al) for (let i = 3, j = 0; i < rgba.length; i += 4, j++) al[j] = rgba[i];
@@ -788,15 +862,19 @@ function makePalette(lab, N, o, A) {
 // the palette index of every pixel (-1: transparent)
 function quantize(lab, prep, w, h, o, pal) {
   const N = w * h, lw = o.balance ? 1.0 : 1.6, spread = prep.spread, A = prep.alpha;
-  const P = pal.length, idx = new Int32Array(N);
+  const P = pal.length, idx = new Int32Array(N), pl = new Float64Array(pal.flat());
   // 4. ordered dither between the two nearest colors, only where the picture is smooth
   const L = (j, own) => A && !A[j] ? own : lab[j * 3];     // a transparent neighbour makes no edge
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, l0 = lab[i * 3], a0 = lab[i * 3 + 1], b0 = lab[i * 3 + 2];
     if (A && !A[i]) { idx[i] = -1; continue; }
     let i1 = 0, i2 = 0, d1 = Infinity, d2 = Infinity;
-    for (let j = 0; j < P; j++) {
-      const d = ((l0 - pal[j][0]) * lw) ** 2 + (a0 - pal[j][1]) ** 2 + (b0 - pal[j][2]) ** 2;
+    for (let j = 0; j < P; j++) {                 // (a color already further than the second nearest is passed over)
+      const e0 = (l0 - pl[j * 3]) * lw, e1 = a0 - pl[j * 3 + 1];
+      let d = e0 * e0 + e1 * e1;
+      if (d >= d2) continue;
+      const e2 = b0 - pl[j * 3 + 2];
+      d += e2 * e2;
       if (d < d1) { d2 = d1; i2 = i1; d1 = d; i1 = j; } else if (d < d2) { d2 = d; i2 = j; }
     }
     const p1 = pal[i1], p2 = pal[i2], s0 = p2[0] - p1[0], s1 = p2[1] - p1[1], s2 = p2[2] - p1[2];
@@ -827,6 +905,7 @@ function pixelate(prep, w, h, o) {
 // ---------------------------------------------------------------- page
 const S = { src: null, opts: { ...DEFAULTS }, timer: 0, cache: null, result: null };
 const TOUCH = matchMedia("(hover: none)").matches;     // a phone or a tablet: hints say tap, nothing follows a pointer
+const APP = document.documentElement.classList.contains("app");   // an app built on this page (it adds its own layer)
 const stage = document.getElementById("stage"), srcImg = document.getElementById("srcImg"), pxView = document.getElementById("pxView");
 const SLIDERS = [["colors", v => v], ["dither", v => (+v).toFixed(2)], ["edges", v => (+v).toFixed(2)], ["contrast", v => (+v).toFixed(2)], ["sat", v => (+v).toFixed(2)], ["boost", v => (+v).toFixed(2)], ["keep", v => (+v >= 1 ? "all" : (+v).toFixed(2))]];
 
@@ -847,8 +926,9 @@ function syncControls() {
   gridInfo();
 }
 // the result's size: the picture over the pixel size (x2: half), within what a phone works through in a second or two
-function gridSize() {
-  const o = S.opts, W0 = S.src ? S.src.naturalWidth : 1600, H0 = S.src ? S.src.naturalHeight : 720;
+function gridSize() { return gridSizeFor(S.opts); }
+function gridSizeFor(o) {
+  const W0 = S.src ? S.src.naturalWidth : 1600, H0 = S.src ? S.src.naturalHeight : 720;
   let h = Math.round(H0 / Math.max(1, o.size));
   const most = S.anim ? Math.min(MAX_PIXELS, Math.floor(MAX_ANIM_GRID / S.anim.frames.length)) : MAX_PIXELS;   // shared by all frames
   const cap = Math.min(MAX_ROWS, H0, Math.floor(Math.sqrt(most * H0 / W0)));
@@ -877,16 +957,18 @@ document.getElementById("panel").addEventListener("submit", e => e.preventDefaul
 
 // the preview: the result drawn once per result or size change at exactly the screen pixels it covers
 // (nearest pixel when enlarging; smooth when the result has more pixels than the screen area, which would drop some)
-let viewSize = null;
+let viewSize = null, viewHook = null;                 // the viewer draws the zoomable view itself (see "the viewer")
 function paintView() {
+  if (viewHook) { viewHook(); return; }
   if (!S.result) return;
   const r = pxView.getBoundingClientRect();     // until the observer has measured (it waits while the tab is hidden)
   const [W, H] = viewSize || [Math.round(r.width * devicePixelRatio), Math.round(r.height * devicePixelRatio)];
   if (!W || !H) return;
   if (pxView.width !== W || pxView.height !== H) { pxView.width = W; pxView.height = H; }
   const x = pxView.getContext("2d");
-  x.imageSmoothingEnabled = W < S.result.w; x.imageSmoothingQuality = "high";
-  x.clearRect(0, 0, W, H); x.drawImage(S.result.canvas, 0, 0, W, H);
+  const R = S.draft || S.result;                 // a new grid's draft until its pixel art is there
+  x.imageSmoothingEnabled = W < R.w; x.imageSmoothingQuality = "high";
+  x.clearRect(0, 0, W, H); x.drawImage(R.canvas, 0, 0, W, H);
 }
 {
   const ro = new ResizeObserver(([e]) => {
@@ -900,32 +982,132 @@ function paintView() {
 pxView.addEventListener("contextrestored", paintView);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) paintView(); });
 const fileSize = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+function dlLabels(kind, w, h, scale) {                 // the two downloads: the exact grid, and scaled up crisp
+  document.getElementById("dlLabel").textContent = APP ? `Exact ${kind} · ${w} × ${h}` : `${kind} ${w}×${h}`;
+  document.getElementById("dlBigLabel").textContent = APP ? `Big ${kind} · ${w * scale} × ${h * scale}` : `${kind} ×${scale}`;
+}
 function schedule() { clearTimeout(S.timer); stage.classList.add("busy"); S.timer = setTimeout(run, 60); }
+
+// The engine works in a worker where it can, so the page keeps answering (a slider, the line, the buttons) while a
+// phone takes a second over a big photo. The worker runs the engine above exactly as it is: the text between the
+// "palettes" and "page" markers of this very script. One job at a time: changes made meanwhile wait, and only the
+// newest settings go next (a slider dragged on a slow phone never queues up a backlog). Where a page may not start a
+// worker (a security policy: the website marks itself data-noworker) or the worker fails, the engine runs here.
+const engine = (() => {
+  if (typeof Worker === "undefined" || document.documentElement.hasAttribute("data-noworker")) return null;
+  try {
+    const src = document.currentScript.text, line = s => src.lastIndexOf("\n", src.indexOf(s)) + 1;
+    const body = src.slice(line("-- palettes\n"), line("-- page\n"));
+    // previews: a square of the picture at each grid, every look asked for, one by one
+    const glue = `
+function previews(m) {
+  for (const job of m.jobs) {
+    const side = job.n * BLOCK, c = new OffscreenCanvas(side, side), x = c.getContext("2d", { willReadFrequently: true });
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(m.bitmap, 0, 0, side, side);
+    const prep = prepare(x.getImageData(0, 0, side, side).data, job.n, job.n);
+    for (const [key, o] of job.looks) { const r = pixelate(prep, job.n, job.n, o); postMessage({ id: m.id, key, img: r.img }, [r.img.data.buffer]); }
+  }
+  m.bitmap.close();
+}
+let held = null;
+onmessage = ({ data: m }) => {
+  if (m.previews) { try { previews(m); } catch (e) { /* no previews: the cards keep their names */ } return; }
+  try {
+    if (m.rgba) held = { key: m.key, prep: prepare(m.rgba, m.w, m.h) };
+    if (!held || held.key !== m.key) { postMessage({ id: m.id, lost: true }); return; }
+    const r = pixelate(held.prep, m.w, m.h, m.opts);
+    postMessage({ id: m.id, img: r.img, used: r.used }, [r.img.data.buffer]);
+  } catch (e) { held = null; postMessage({ id: m.id, failed: String(e) }); }
+};`;
+    const url = URL.createObjectURL(new Blob(['"use strict";\n', body, glue], { type: "text/javascript" }));
+    const e = { url, worker: new Worker(url), job: 0, busy: false, again: false, done: null };
+    e.worker.onmessage = ({ data }) => { if (data.id === e.job && e.done) e.done(data); };
+    e.worker.onerror = () => { if (e.done) e.done({ id: e.job, failed: "worker" }); };
+    return e;
+  } catch (e) { return null; }
+})();
+let engineOff = !engine;
+// A new grid shows at once as a draft while the worker works it out (a moment on a phone): each cell's mean color,
+// mapped to the colors of the last result when it is the same picture (no dither yet), so when the real one arrives
+// only the details change. Shown only (S.draft); saving, the editor and the stats keep using the real result.
+let draftLut = null;
+function draftOf(w, h, key) {
+  const d = document.createElement("canvas"); d.width = w; d.height = h;
+  const x = d.getContext("2d", { willReadFrequently: true });
+  const src = S.viewOf === S.src && srcImg.complete && srcImg.naturalWidth ? srcImg : S.src;   // the smaller copy when there is one
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, w, h);
+  const img = x.getImageData(0, 0, w, h), p = img.data, cols = S.resultOf === S.src && S.used && S.used.length < 256 ? S.used : null;
+  if (cols && cols.length) {
+    if (!draftLut || draftLut.cols !== cols) {      // the nearest of these colors for every 5-bit RGB step
+      const lut = new Uint8Array(32768);
+      for (let k = 0; k < 32768; k++) {
+        const r = (k >> 10) * 8 + 4, g = (k >> 5 & 31) * 8 + 4, b = (k & 31) * 8 + 4;
+        let best = 0, bd = Infinity;
+        for (let j = 0; j < cols.length; j++) { const dr = r - cols[j][0], dg = g - cols[j][1], db = b - cols[j][2], dd = 2 * dr * dr + 4 * dg * dg + 3 * db * db; if (dd < bd) { bd = dd; best = j; } }
+        lut[k] = best;
+      }
+      draftLut = { cols, lut };
+    }
+    for (let i = 0; i < p.length; i += 4) { const c = cols[draftLut.lut[(p[i] >> 3) << 10 | (p[i + 1] >> 3) << 5 | p[i + 2] >> 3]]; p[i] = c[0]; p[i + 1] = c[1]; p[i + 2] = c[2]; }
+  }
+  for (let i = 3; i < p.length; i += 4) p[i] = p[i] < 128 ? 0 : 255;
+  x.putImageData(img, 0, 0);
+  return { canvas: d, w, h, key };
+}
 function run() {
   if (!S.src) return;
   if (S.anim) { runAnim(); return; }
   const o = S.opts;
   const { w, h } = gridSize();
   const key = `${w}x${h}`;
-  if (!S.cache || S.cache.key !== key) {
+  if (!engineOff && (S.result || S.draft) && (!S.cache || S.cache.key !== key || !S.cache.still) && (!S.draft || S.draft.key !== key)) {
+    S.draft = draftOf(w, h, key); document.documentElement.style.setProperty("--ratio", (w / h).toFixed(4)); paintView();
+  }
+  if (!engineOff && engine.busy) { engine.again = true; return; }     // the newest settings go when it is free
+  let rgba = null;
+  if (!S.cache || S.cache.key !== key || !S.cache.still) {
     const c = document.createElement("canvas"); c.width = w * BLOCK; c.height = h * BLOCK;
     const x = c.getContext("2d", { willReadFrequently: true });
     x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
     x.drawImage(S.src, 0, 0, c.width, c.height);
-    S.cache = { key, prep: prepare(x.getImageData(0, 0, c.width, c.height).data, w, h) };
+    rgba = x.getImageData(0, 0, c.width, c.height).data;
+    let alpha = false;
+    for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 255) { alpha = true; break; }
+    S.cache = { key, still: true, alpha, prep: engineOff ? prepare(rgba, w, h) : null };
     if (S.viewOf !== S.src) {                    // the "before" side: the picture at a size the screen can show
-      if (S.src.naturalWidth <= 1600) { if (srcImg.src !== S.src.src) srcImg.src = S.src.src; }   // small enough as it is
+      if (S.src.naturalWidth <= 1600) {                                    // small enough as it is
+        if (srcImg.src !== S.src.src) srcImg.src = S.src.src;
+        if (S.viewURL) { URL.revokeObjectURL(S.viewURL); S.viewURL = null; }
+      }
       else {
         const vw = 1600, v = document.createElement("canvas");
         v.width = vw; v.height = Math.round(vw * S.src.naturalHeight / S.src.naturalWidth);
         const vx = v.getContext("2d"); vx.imageSmoothingQuality = "high"; vx.drawImage(S.src, 0, 0, v.width, v.height);
-        srcImg.src = S.cache.prep.alpha ? v.toDataURL("image/png") : v.toDataURL("image/jpeg", 0.85);   // keep transparency
+        const mine = S.src;                      // encoded away from the page; PNG keeps transparency
+        v.toBlob(b => { if (!b || S.src !== mine) return; if (S.viewURL) URL.revokeObjectURL(S.viewURL); srcImg.src = S.viewURL = URL.createObjectURL(b); },
+          alpha ? "image/png" : "image/jpeg", 0.85);
       }
       S.viewOf = S.src;
     }
-    stage.style.setProperty("--ratio", (w / h).toFixed(4));
+    document.documentElement.style.setProperty("--ratio", (w / h).toFixed(4));
   }
-  const res = pixelate(S.cache.prep, w, h, o);
+  if (engineOff) { show(pixelate(S.cache.prep, w, h, o), w, h, key); return; }
+  const cache = S.cache, id = ++engine.job;
+  engine.busy = true; stage.classList.add("busy");
+  engine.done = m => {
+    engine.busy = false; engine.done = null;
+    if (m.failed || m.lost) {                    // out of memory, or the worker lost the picture: the page does it
+      if (m.failed) engineOff = true;
+      if (S.cache === cache) S.cache = null;
+      engine.again = false; schedule(); return;
+    }
+    if (S.cache === cache && !S.anim) show(m, w, h, key);   // a result for a picture since replaced is dropped
+    if (engine.again) { engine.again = false; run(); }
+  };
+  engine.worker.postMessage({ id, key, w, h, opts: { ...o }, rgba }, rgba ? [rgba.buffer] : []);
+}
+// the result on the stage, with the stats, swatches and download sizes
+function show(res, w, h, key) {
   // edits made in the editor for this grid size go on top of the generated art (kept apart, so a slider change keeps them)
   const ed = S.edits.get(key);
   let img = res.img, used = res.used;
@@ -936,7 +1118,7 @@ function run() {
     used = coloursOf(img.data);
   } else if (S.edits.size && !S.editsAway) { S.editsAway = true; stageNote("Your edits come back at the pixel size you made them at"); }
   if (ed) S.editsAway = false;
-  S.base = res.img; S.shown = img.data;
+  S.base = res.img; S.shown = img.data; S.draft = null; S.used = used; S.resultOf = S.src;
   // kept in memory rather than on the graphics chip: Chrome on Android once dropped it there (the pixel art side went blank)
   const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d", { willReadFrequently: true }).putImageData(img, 0, 0);
   S.result = { canvas: c, w, h };
@@ -951,12 +1133,12 @@ function run() {
   stats.textContent = line;
   stats.title = `Original size: ${S.src.naturalWidth} × ${S.src.naturalHeight} px${S.srcBytes ? ` · ${fileSize(S.srcBytes)}` : ""}`;
   c.toBlob(b => { if (b && S.statsFor === mine) stats.textContent = `${line} · ${fileSize(b.size)}`; }, "image/png");
-  document.getElementById("dlLabel").textContent = `PNG ${w}×${h}`;
-  document.getElementById("dlBigLabel").textContent = `PNG ×${scale}`;
+  dlLabels("PNG", w, h, scale);
   gridInfo();
   stage.classList.remove("busy");
+  if (afterShow) afterShow(used);
 }
-
+let afterShow = null;                  // called with every new result (its colors), for a layer built on this page
 // an animation: every frame through the same steps with one palette for all of them (picked from up to 12 frames
 // spread over the loop), in slices of a few milliseconds so the page keeps responding. A newer change stops an older
 // run; frames already reduced at this grid size stay, and the next run goes on from there.
@@ -991,7 +1173,7 @@ async function runAnim() {
   if (!S.cache || S.cache.key !== key || S.cache.anim !== A) {
     S.cache = { key, anim: A, preps: [], held: [], ref: new Float32Array(N * 4) };
     if (S.viewOf !== S.src) { srcImg.src = S.src.src; S.viewOf = S.src; }
-    stage.style.setProperty("--ratio", (w / h).toFixed(4));
+    document.documentElement.style.setProperty("--ratio", (w / h).toFixed(4));
   }
   const C = S.cache;
   if (C.preps.length < F) {
@@ -1053,10 +1235,10 @@ async function runAnim() {
   stats.title = `Original size: ${A.W} × ${A.H} px · ${A.total} frames${S.srcBytes ? ` · ${fileSize(S.srcBytes)}` : ""}` +
     (A.step > 1 ? `\nA very long or large GIF: 1 frame in ${A.step} is kept, shown as long as the ones it stands for` : "");
   gifEncode(R, 1).then(b => { if (S.statsFor === mine) stats.textContent = `${line} · ${fileSize(b.size)}`; }, () => {});
-  document.getElementById("dlLabel").textContent = `GIF ${w}×${h}`;
-  document.getElementById("dlBigLabel").textContent = `GIF ×${S.gifScale}`;
+  dlLabels("GIF", w, h, S.gifScale);
   gridInfo();
   stage.classList.remove("busy");
+  if (afterShow) afterShow([...used].sort((a, b) => light[a] - light[b]).map(j => rgb[j]));
   if (play.on && !play.timer) play.timer = setTimeout(tick, A.frames[play.i].delay);
 }
 // playing: both sides show the same frame, each for its own time; nothing moves while the tab is hidden
@@ -1066,11 +1248,12 @@ let frameCanvas = null;
 function drawSrcFrame() {                              // the picture side: the frame at the screen pixels it covers
   const A = S.anim;
   if (!A) return;
-  const r = srcAnim.getBoundingClientRect(), W = Math.round(r.width * devicePixelRatio), H = Math.round(r.height * devicePixelRatio);
-  if (!W || !H) return;
   if (!frameCanvas) frameCanvas = document.createElement("canvas");
   if (frameCanvas.width !== A.W || frameCanvas.height !== A.H) { frameCanvas.width = A.W; frameCanvas.height = A.H; }
   frameCanvas.getContext("2d").putImageData(new ImageData(A.frames[play.i].rgba, A.W, A.H), 0, 0);
+  if (viewHook) { viewHook(); return; }
+  const r = srcAnim.getBoundingClientRect(), W = Math.round(r.width * devicePixelRatio), H = Math.round(r.height * devicePixelRatio);
+  if (!W || !H) return;
   if (srcAnim.width !== W || srcAnim.height !== H) { srcAnim.width = W; srcAnim.height = H; }
   const x = srcAnim.getContext("2d");
   x.imageSmoothingQuality = "high"; x.clearRect(0, 0, W, H); x.drawImage(frameCanvas, 0, 0, W, H);
@@ -1164,7 +1347,9 @@ function renderPresets() {
   del.hidden = !chosen.startsWith("u"); del.textContent = "Delete this preset"; del.classList.remove("warn"); pendingDelete = 0;
   const name = chosen ? sel.selectedOptions[0].textContent : (document.getElementById("presetName").value.trim() || "My preset");
   document.getElementById("presetCode").value = encodeCode(name, o);
+  if (renderChips) renderChips(sel, chosen);
 }
+let renderChips = null;                // called whenever the presets are listed, for a layer built on this page
 document.getElementById("preset").addEventListener("change", e => {
   const v = e.target.value; if (!v) return;
   S.pickName = e.target.selectedOptions[0].textContent;
@@ -1212,13 +1397,15 @@ document.getElementById("presetName").addEventListener("input", () => { if (!doc
 // picture snapped back to the middle); a double-click lets it follow again; a label shows only that side
 const cut = { pinned: false, down: null, dragged: false, follow: false, only: null };
 const setCut = f => stage.style.setProperty("--cut", `${(Math.min(1, Math.max(0, f)) * 100).toFixed(2)}%`);
-const fracAt = e => { const r = stage.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
+// where the pointer is along the line's way: the area, or with the viewer the visible picture (the line stays on it)
+const fracAt = e => { if (viewer.on) return viewer.frac(e.clientX); const r = stage.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
 const cutHint = t => { document.getElementById("cutHint").textContent = t; };
 const FOLLOW_HINT = TOUCH ? "Tap or drag to move the line" : "Click or drag to keep the line there";
 cutHint(FOLLOW_HINT);
 function markOnly(side) {
   cut.only = side;
   stage.querySelectorAll(".tag").forEach(t => t.classList.toggle("on", t.dataset.side === side));
+  stage.classList.toggle("one", !!side);           // one side only: no line at its edge
 }
 function keepAt(f, hint) { cut.pinned = true; markOnly(null); setCut(f); cutHint(hint); }
 function follow(f) { cut.pinned = false; markOnly(null); cutHint(FOLLOW_HINT); setCut(f); }
@@ -1240,6 +1427,24 @@ stage.addEventListener("pointerup", e => {
 stage.addEventListener("pointercancel", () => { cut.down = null; stage.classList.remove("dragging"); });
 stage.addEventListener("pointerleave", () => { cut.follow = false; });
 stage.addEventListener("dblclick", e => { cut.follow = true; follow(fracAt(e)); });
+// the mouse pointer's look: the double arrow only where moving the mouse moves the line (while the line follows it,
+// or right at a kept line), a hand where dragging moves a zoomed picture, else the plain arrow (a kept line, only one
+// side shown)
+// (while the line follows, nothing is measured: right after the line moved that would make the browser lay the page out
+// again on every move; and the attribute is only written when the look changes)
+function pointerLook(e) {
+  if (e.pointerType !== "mouse") return;
+  const zoomed = viewer.on && viewer.zoom > 1.02;
+  let look;
+  if (cut.only) look = zoomed ? "pan" : "";
+  else if (!cut.pinned) look = "line";
+  else {
+    const r = stage.getBoundingClientRect(), x = viewer.on ? viewer.lineX() : r.left + r.width * (parseFloat(stage.style.getPropertyValue("--cut")) || 50) / 100;
+    look = Math.abs(e.clientX - x) < 28 ? "line" : zoomed ? "pan" : "";
+  }
+  if (stage.dataset.cursor !== look) stage.dataset.cursor = look;
+}
+for (const ev of ["pointermove", "pointerdown", "pointerup"]) stage.addEventListener(ev, pointerLook);
 for (const t of stage.querySelectorAll(".tag")) {
   for (const ev of ["pointerdown", "pointerup", "pointermove", "dblclick"]) t.addEventListener(ev, e => e.stopPropagation());
   t.addEventListener("click", () => {
@@ -1394,10 +1599,12 @@ function openFile(f) {
   if (!f || !f.type.startsWith("image/")) return;
   if (f.type === "image/gif" || /\.gif$/i.test(f.name || "")) { openGif(f); return; }
   const rd = new FileReader();
-  rd.onload = () => { const im = new Image(); im.onload = () => {
+  stage.classList.add("busy");
+  // decoded before use, away from the page (drawing a big photo undecoded would hold the page for a moment)
+  rd.onload = () => { const im = new Image(); im.onload = () => im.decode().catch(() => {}).then(() => {
     stopAnim(); S.edits.clear(); S.editsAway = false;
     S.src = im; S.srcBytes = f.size; S.cache = null;
-    syncControls(); renderPresets(); schedule(); }; im.src = rd.result; };
+    syncControls(); renderPresets(); schedule(); }); im.src = rd.result; };
   rd.readAsDataURL(f);
 }
 // a GIF with more than one frame becomes an animation (its first frame stands in as the picture); one frame: a picture
@@ -1439,22 +1646,24 @@ function scaled(scale) {             // the result, each pixel scale x scale (no
   const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(canvas, 0, 0, c.width, c.height);
   return c;
 }
+let appSave = null;                  // a layer built on this page may save files its own way
 function download(b, filename) {
+  if (appSave) { appSave(b, filename); return; }
   if (viewerDownloads) { viewerDownloads.save({ filename, data: b }).catch(() => { /* declined or unavailable: nothing to do */ }); return; }
   const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = filename; document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
-function save(scale) {
-  if (!S.result) return;
+// the result as a file: a PNG, or a GIF for an animation (null when there is nothing yet)
+function resultFile(scale) {
+  if (!S.result || (S.anim && !S.animOut)) return null;
   const { w, h } = S.result, name = `pixel-pass-${w}x${h}${scale > 1 ? `-x${scale}` : ""}`;
-  if (S.anim) {                                        // an animation saves as a GIF
-    const R = S.animOut;
-    if (!R) return;
-    stageNote("Making the GIF…");
-    gifEncode(R, scale).then(b => download(b, `${name}.gif`), () => stageNote("The GIF could not be made"));
-    return;
-  }
-  scaled(scale).toBlob(b => download(b, `${name}.png`), "image/png");
+  if (S.anim) return gifEncode(S.animOut, scale).then(blob => ({ blob, name: `${name}.gif` }));
+  return new Promise(res => scaled(scale).toBlob(blob => res({ blob, name: `${name}.png` }), "image/png"));
+}
+function save(scale) {
+  if (S.anim && S.animOut) stageNote("Making the GIF…");                    // an animation saves as a GIF
+  const f = resultFile(scale);
+  if (f) f.then(r => download(r.blob, r.name), () => stageNote("The GIF could not be made"));
 }
 document.getElementById("dl").addEventListener("click", () => save(1));
 document.getElementById("dlBig").addEventListener("click", () => save(S.anim ? S.gifScale : (S.scale || 4)));
@@ -1466,7 +1675,9 @@ document.getElementById("dlBig").addEventListener("click", () => save(S.anim ? S
 // in the last few seconds: then a "Click here to copy" button appears, and its click is the action they want.
 let noteTimer = 0;
 const copyNow = document.getElementById("copyNow");
+let noteHook = null;                 // a layer built on this page may show the notes its own way
 function stageNote(t) {
+  if (noteHook) { noteHook(t); return; }
   const n = document.getElementById("stageNote");
   copyNow.hidden = true;
   n.textContent = t; n.hidden = false; clearTimeout(noteTimer); noteTimer = setTimeout(() => { n.hidden = true; }, 1800);
@@ -1510,6 +1721,7 @@ document.fonts.ready.then(() => {
 const docEl = document.documentElement, fsPanel = document.getElementById("fsPanel");
 function setFull(on, panel) {
   docEl.classList.toggle("full", on);
+  viewer.enable(on || TOUCH);                    // zoom and move with fingers or the wheel (see "the viewer"); a phone always
   if (on) { docEl.classList.toggle("nopanel", !panel); fsPanel.setAttribute("aria-pressed", String(!!panel)); }
 }
 function leaveFull() {
@@ -1582,7 +1794,7 @@ function openEditor() {
   ED.open = true; editor.hidden = false; docEl.classList.add("editing"); wrapEl.inert = true;
   // on a phone or tablet the browser's bars go too, as in the full view (only when the page is not in it already)
   ED.fs = false;
-  if (TOUCH && !document.fullscreenElement && !docEl.classList.contains("full") && docEl.requestFullscreen) {
+  if (TOUCH && !APP && !document.fullscreenElement && !docEl.classList.contains("full") && docEl.requestFullscreen) {
     try { const p = docEl.requestFullscreen(); ED.fs = true; if (p && p.catch) p.catch(() => { ED.fs = false; }); } catch (e) { /* not allowed here */ }
   }
   const cs = getComputedStyle(docEl);
@@ -1635,7 +1847,9 @@ const zMax = () => Math.max(4, Math.round(64 * devicePixelRatio));
 function edFit() {
   const W = edCanvas.width, H = edCanvas.height;
   const m = Math.round(8 * devicePixelRatio);       // a little room around it
-  ED.z = Math.max(1, Math.floor(Math.min((W - m) / ED.w, (H - m) / ED.h)));
+  const f = Math.min((W - m) / ED.w, (H - m) / ED.h);
+  // in an app: one step closer when the picture then sticks out by at most 15 % (else a phone shows it at half the width)
+  ED.z = Math.max(1, APP && Math.ceil(f) / f <= 1.15 ? Math.ceil(f) : Math.floor(f));
   ED.ox = Math.round((W - ED.w * ED.z) / 2); ED.oy = Math.round((H - ED.h * ED.z) / 2);
   redraw();
 }
@@ -2007,6 +2221,239 @@ addEventListener("keydown", e => {
   if (a && a.matches("input[type=text], input:not([type]), textarea, select, [contenteditable]")) return;
   e.preventDefault(); openEditor();
 });
+
+// ---------------------------------------------------------------- the viewer
+// The app always, the website in its full view: the picture area takes the room it has and both sides are drawn into
+// it, fitted, zoomed and moved by the page itself (a canvas the size of the area, one canvas pixel per screen pixel,
+// so the pixels stay sharp at any zoom). One finger moves the line; two fingers zoom and move; zoomed in, one finger
+// moves the picture too (except right at the line) and a tap still puts the line there; with only the picture or only
+// the pixel art shown, one finger never moves the line. A double tap zooms in there or back out (fingers only: a
+// double click on the website lets the line follow the mouse again); the mouse wheel zooms too.
+// While fingers move nothing is drawn: the whole picture and the whole pixel art wait as layers of their own
+// (srcFull, artFull) and only their position and scale change, which the graphics chip does almost for free (a
+// phone spent most of each frame putting two freshly drawn area-sized canvases on screen: one frame in five came
+// late). When the fingers let go, the sharp drawing comes back at the new place.
+const viewer = (() => {
+  let on = false, onTouch = () => {}, onTick = () => {};
+  const srcClip = document.createElement("div"); srcClip.className = "srcclip";
+  const srcView = document.createElement("canvas"); srcView.id = "srcView"; srcView.setAttribute("aria-hidden", "true");
+  const srcFull = document.createElement("canvas"), artFull = document.createElement("canvas");
+  srcFull.className = "gest"; artFull.className = "gest art"; srcFull.setAttribute("aria-hidden", "true"); artFull.setAttribute("aria-hidden", "true");
+  srcClip.append(srcView, srcFull);
+  stage.insertBefore(srcClip, pxView); pxView.after(artFull);
+  const V = { z: 1, cx: 0.5, cy: 0.5, src: null };
+  const dpr = () => devicePixelRatio || 1;
+  let box = [0, 0];                                  // the area in canvas pixels, measured when it changes, not per move
+  const measure = () => { const r = stage.getBoundingClientRect(); box = [Math.round(r.width * dpr()), Math.round(r.height * dpr())]; };
+  const boxSize = () => { if (!box[0] || !box[1]) measure(); return box; };
+  const aspect = () => { const R = S.draft || S.result; return R ? R.w / R.h : (srcImg.naturalWidth / srcImg.naturalHeight) || 2; };
+  function fitSize(W, H) { const a = aspect(); return W / H > a ? [H * a, H] : [W, W / a]; }
+  // the line's way: the visible part of the picture (canvas pixels: left, width), handed to the page's CSS as shares of
+  // the area, so the line runs only across the picture (the area can be wider and taller than it)
+  let vis = [0, 1], visCss = "";
+  function placeLine(p, W, H) {
+    stage.classList.toggle("zoomed", V.z > 1.02);    // (zoomed in: one finger moves the picture, also on the website's page)
+    const l = Math.max(0, p.left), r = Math.min(W, p.left + p.zw), t = Math.max(0, p.top), b = Math.min(H, p.top + p.zh);
+    vis = [l, Math.max(1, r - l)];
+    const v = [`${(l / W * 100).toFixed(3)}%`, ((r - l) / W).toFixed(5), `${(t / H * 100).toFixed(3)}%`, `${((H - b) / H * 100).toFixed(3)}%`];
+    if (v.join() === visCss) return;
+    visCss = v.join();
+    ["--vl", "--vwk", "--vt", "--vb"].forEach((k, i) => stage.style.setProperty(k, v[i]));
+  }
+  const lineX = () => { const r = stage.getBoundingClientRect(); return r.left + (vis[0] + cutNow() * vis[1]) / dpr(); };
+  const frac = x => { const r = stage.getBoundingClientRect(); return (x - r.left - vis[0] / dpr()) / (vis[1] / dpr()); };
+  function picRect(W, H) {                           // where the picture is, in canvas pixels; kept on screen
+    const [fw, fh] = fitSize(W, H), zw = fw * V.z, zh = fh * V.z;
+    let left = W / 2 - V.cx * zw, top = H / 2 - V.cy * zh;
+    left = zw <= W ? (W - zw) / 2 : Math.min(0, Math.max(W - zw, left));
+    top = zh <= H ? (H - zh) / 2 : Math.min(0, Math.max(H - zh, top));
+    V.cx = (W / 2 - left) / zw; V.cy = (H / 2 - top) / zh;
+    return { left: Math.round(left), top: Math.round(top), zw: Math.round(zw), zh: Math.round(zh), fw };
+  }
+  const zMax = () => { const [W, H] = boxSize(), [fw] = fitSize(W, H); return S.result ? Math.max(2, 48 * S.result.w / fw) : 8; };   // a pixel up to 48 screen pixels
+  let checker = null;
+  function underlay(x, p, W, H) {                    // a checkerboard under the picture (shows where it is transparent)
+    if (!checker) {
+      const c = document.createElement("canvas"), q = Math.round(8 * dpr()); c.width = c.height = q * 2;
+      const cs = getComputedStyle(docEl), y = c.getContext("2d");
+      y.fillStyle = cs.getPropertyValue("--stage").trim(); y.fillRect(0, 0, q * 2, q * 2);
+      y.fillStyle = cs.getPropertyValue("--checker").trim(); y.fillRect(0, 0, q, q); y.fillRect(q, q, q, q);
+      checker = x.createPattern(c, "repeat");
+    }
+    const l = Math.max(0, p.left), t = Math.max(0, p.top);
+    x.fillStyle = checker; x.fillRect(l, t, Math.min(W, p.left + p.zw) - l, Math.min(H, p.top + p.zh) - t);
+  }
+  new MutationObserver(() => { checker = null; if (on) viewDraw(); }).observe(docEl, { attributes: true, attributeFilter: ["data-sky"] });
+  let drawQueued = false;
+  function viewDraw() {
+    drawQueued = false;
+    measure();                                       // the size it has now: a drawing at an old size would show stretched
+    const [W, H] = boxSize();
+    if (!W || !H) return;
+    if (V.src !== S.src) { V.src = S.src; V.z = 1; V.cx = V.cy = 0.5; }      // a new picture: the whole of it
+    for (const c of [pxView, srcView]) if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    const p = picRect(W, H), x = pxView.getContext("2d"), y = srcView.getContext("2d");
+    placeLine(p, W, H);
+    x.clearRect(0, 0, W, H); y.clearRect(0, 0, W, H);
+    underlay(x, p, W, H); underlay(y, p, W, H);
+    const R = S.draft || S.result;                  // a new grid's draft until its pixel art is there
+    if (R) { x.imageSmoothingEnabled = p.zw < R.w; x.imageSmoothingQuality = "high"; x.drawImage(R.canvas, p.left, p.top, p.zw, p.zh); }
+    const src = S.anim && frameCanvas ? frameCanvas : srcImg;
+    if (src !== srcImg || (srcImg.complete && srcImg.naturalWidth)) {
+      y.imageSmoothingEnabled = true; y.imageSmoothingQuality = "high";
+      y.drawImage(src, p.left, p.top, p.zw, p.zh);
+    }
+  }
+  const redrawView = () => { if (!drawQueued) { drawQueued = true; requestAnimationFrame(viewDraw); } };
+  // the layers for moving fingers: the pixel art at its own size (scaled up with nearest pixels by the graphics
+  // chip), the picture at the size it is shown from; copied when they change, placed by a transform
+  let gest = false, artOf = null, srcOf = null;
+  function syncGest() {
+    const R = S.draft || S.result;
+    if (R && artOf !== R.canvas) {
+      artOf = R.canvas;
+      if (artFull.width !== R.w || artFull.height !== R.h) { artFull.width = R.w; artFull.height = R.h; }
+      const a = artFull.getContext("2d"); a.clearRect(0, 0, R.w, R.h); a.drawImage(R.canvas, 0, 0);
+    }
+    const src = S.anim && frameCanvas ? frameCanvas : srcImg.complete && srcImg.naturalWidth ? srcImg : null;
+    if (src && (S.anim || srcOf !== srcImg.src)) {
+      srcOf = srcImg.src;
+      const sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height;
+      if (srcFull.width !== sw || srcFull.height !== sh) { srcFull.width = sw; srcFull.height = sh; }
+      const s = srcFull.getContext("2d"); s.clearRect(0, 0, sw, sh); s.drawImage(src, 0, 0);
+    }
+  }
+  function placeGest() {
+    const [W, H] = boxSize(), p = picRect(W, H), d = dpr(), [fw, fh] = fitSize(W, H);
+    const t = `translate(${p.left / d}px, ${p.top / d}px) scale(${p.zw / fw})`;
+    for (const c of [artFull, srcFull]) { c.style.width = `${fw / d}px`; c.style.height = `${fh / d}px`; c.style.transform = t; }
+    placeLine(p, W, H);
+  }
+  function gestStart() { if (gest) return; gest = true; syncGest(); placeGest(); stage.classList.add("gesturing"); }
+  function gestEnd() { if (!gest) return; gest = false; viewDraw(); stage.classList.remove("gesturing"); }
+  let syncTimer = 0;                                 // the layers made ready a moment after each change, before a gesture needs them
+  const hook = () => { if (gest) { syncGest(); placeGest(); } else { viewDraw(); clearTimeout(syncTimer); syncTimer = setTimeout(() => { if (!gest) { syncGest(); placeGest(); } }, 150); } };
+  srcImg.addEventListener("load", () => { if (!on) return; if (gest) { syncGest(); placeGest(); } else redrawView(); });
+  // a new size is drawn in the same frame (an observer runs after layout, before the frame is painted)
+  new ResizeObserver(() => { if (!on) return; measure(); if (gest) placeGest(); else viewDraw(); }).observe(stage);
+  // zoom to z keeping the picture point under (px, py) (canvas pixels) where it is
+  function zoomTo(z, px, py) {
+    const [W, H] = boxSize(), p = picRect(W, H), u = (px - p.left) / p.zw, v = (py - p.top) / p.zh;
+    V.z = Math.min(zMax(), Math.max(1, z));
+    const [fw, fh] = fitSize(W, H);
+    V.cx = u + (W / 2 - px) / (fw * V.z); V.cy = v + (H / 2 - py) / (fh * V.z);
+    redrawView();
+  }
+  let gliding = false;
+  function glideTo(z, px, py) {                      // the double tap: a short glide
+    gliding = true;
+    const z0 = V.z, t0 = performance.now(), [W, H] = boxSize(), p = picRect(W, H), u = (px - p.left) / p.zw, v = (py - p.top) / p.zh;
+    const step = t => {
+      const k = Math.min(1, (t - t0) / 180), e = 1 - (1 - k) ** 3, nz = z0 + (z - z0) * e;
+      const [fw, fh] = fitSize(W, H);
+      V.z = Math.min(zMax(), Math.max(1, nz)); V.cx = u + (W / 2 - px) / (fw * V.z); V.cy = v + (H / 2 - py) / (fh * V.z);
+      if (k < 1) { gestStart(); placeGest(); } else { gliding = false; gestEnd(); }
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const fingers = new Map();
+  let g = null, lastTap = null;
+  const at = e => { const r = stage.getBoundingClientRect(); return [(e.clientX - r.left) * dpr(), (e.clientY - r.top) * dpr()]; };
+  const cutNow = () => (parseFloat(stage.style.getPropertyValue("--cut")) || 50) / 100;
+  const nearLine = e => Math.abs(e.clientX - lineX()) < 28;
+  const mine = e => !(e.target instanceof Element && e.target.closest("button"));       // the labels, Play, the zoom button
+  let lastType = "";
+  stage.addEventListener("pointerdown", e => {
+    lastType = e.pointerType;
+    if (!on || !mine(e)) return;
+    fingers.set(e.pointerId, at(e));
+    onTouch();
+    if (fingers.size >= 2) {                         // a second finger: zoom and move; the first one's line move is undone
+      e.stopImmediatePropagation();
+      if (fingers.size > 2) return;
+      if (g && g.cut0 !== undefined && g.mode === "line") setCut(g.cut0);
+      cut.down = null; stage.classList.remove("dragging");
+      const [a, b] = [...fingers.values()], [W, H] = boxSize(), p = picRect(W, H), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      g = { mode: "pinch", d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: V.z, u: (mx - p.left) / p.zw, v: (my - p.top) / p.zh };  gestStart();
+      try { stage.setPointerCapture(e.pointerId); } catch (er) { /* fine */ }
+      return;
+    }
+    const [x, y] = fingers.get(e.pointerId), now = performance.now(), cut0 = cutNow();
+    if ((APP || e.pointerType === "touch") && lastTap && now - lastTap.t < 320 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40 * dpr()) {   // a double tap
+      e.stopImmediatePropagation();
+      setCut(lastTap.cut); cut.down = null;
+      glideTo(V.z > 1.05 ? 1 : Math.min(zMax(), 3), x, y); onTick();
+      lastTap = null; g = { mode: "none" };
+      return;
+    }
+    if (cut.only || (V.z > 1.02 && !nearLine(e))) {   // zoomed in (or one side only): one finger moves the picture
+      e.stopImmediatePropagation();
+      g = { mode: "pan", x, y, moved: false, cut0 }; gestStart();
+      if (e.pointerType === "mouse") stage.classList.add("panning");
+      try { stage.setPointerCapture(e.pointerId); } catch (er) { /* fine */ }
+      return;
+    }
+    g = { mode: "line", cut0, x, y };                // the page's own handlers move the line
+  }, true);
+  stage.addEventListener("pointermove", e => {
+    if (!on || !fingers.has(e.pointerId) || !g) return;
+    const [x, y] = at(e), [px, py] = fingers.get(e.pointerId);
+    fingers.set(e.pointerId, [x, y]);
+    if (g.mode === "pinch" && fingers.size >= 2) {
+      e.stopImmediatePropagation();
+      const [a, b] = [...fingers.values()], [W, H] = boxSize(), [fw, fh] = fitSize(W, H), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      V.z = Math.min(zMax(), Math.max(1, g.z0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / g.d0));
+      V.cx = g.u + (W / 2 - mx) / (fw * V.z); V.cy = g.v + (H / 2 - my) / (fh * V.z);
+      placeGest();
+    } else if (g.mode === "pan") {
+      e.stopImmediatePropagation();
+      if (Math.hypot(x - g.x, y - g.y) > 6 * dpr()) g.moved = true;
+      const [W, H] = boxSize(), [fw, fh] = fitSize(W, H);
+      V.cx -= (x - px) / (fw * V.z); V.cy -= (y - py) / (fh * V.z);
+      placeGest();
+    } else if (g.mode === "none") e.stopImmediatePropagation();
+  }, true);
+  const lift = e => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.delete(e.pointerId);
+    stage.classList.remove("panning");
+    if (!g) return;
+    if (g.mode === "pan" || g.mode === "pinch" || g.mode === "none") {
+      e.stopImmediatePropagation();
+      if (g.mode === "pan" && !g.moved && e.type === "pointerup" && !cut.only) { keepAt(fracAt(e), FOLLOW_HINT); lastTap = { t: performance.now(), x: g.x, y: g.y, cut: g.cut0 }; }
+      if (fingers.size) { g = { mode: "none" }; return; }
+      if (!gliding) gestEnd();
+    } else if (g.mode === "line" && e.type === "pointerup") {
+      const [x, y] = at(e);
+      lastTap = Math.hypot(x - g.x, y - g.y) < 12 * dpr() ? { t: performance.now(), x, y, cut: g.cut0 } : null;
+    }
+    if (!fingers.size) g = null;
+  };
+  stage.addEventListener("pointerup", lift, true);
+  stage.addEventListener("pointercancel", lift, true);
+  stage.addEventListener("dblclick", e => { if (on && (APP || lastType === "touch")) e.stopImmediatePropagation(); }, true);   // double taps are the viewer's
+  // the wheel zooms: listened to only while the viewer is on (a wheel listener that may stop scrolling makes the
+  // browser wait for the page before every scroll step over the picture)
+  const onWheel = e => { e.preventDefault(); const [x, y] = at(e); zoomTo(V.z * Math.exp(-e.deltaY / 400), x, y); };
+  // on: the area drawn by the viewer; off (the website outside its full view): the page's own drawing again
+  function enable(state) {
+    if (on === state) return;
+    on = state;
+    stage.classList.toggle("viewer", on);
+    V.z = 1; V.cx = V.cy = 0.5;
+    if (gest) { gest = false; stage.classList.remove("gesturing"); }
+    fingers.clear(); g = null;
+    viewHook = on ? hook : null;
+    if (on) stage.addEventListener("wheel", onWheel, { passive: false }); else stage.removeEventListener("wheel", onWheel);
+    if (!on) { ["--vl", "--vwk", "--vt", "--vb"].forEach(k => stage.style.removeProperty(k)); visCss = ""; stage.classList.remove("zoomed"); }   // the line across the area again
+    if (on) viewDraw(); else { viewSize = null; paintView(); drawSrcFrame(); }
+  }
+  return { enable, draw: () => { if (on) viewDraw(); }, set onTouch(f) { onTouch = f; }, set onTick(f) { onTick = f; }, get on() { return on; }, get zoom() { return V.z; }, frac, lineX };
+})();
+if (TOUCH && !APP) viewer.enable(true);              // the website on a phone: a pinch on the picture zooms it, not the page
+
+/*APP-SCRIPT*/
 
 // the sample: a summer riverside beach
 // the last settings of this browser (restored here: the helpers it needs are defined above by now)
